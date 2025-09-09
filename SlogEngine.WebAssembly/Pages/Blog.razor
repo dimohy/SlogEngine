@@ -1,0 +1,211 @@
+@page "/blogs/{id}"
+@layout BlogLayout
+@using SlogEngine.WebAssembly.Models
+@using SlogEngine.WebAssembly.Services
+@using SlogEngine.WebAssembly.Components
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+@inject BlogApiService BlogApiService
+@inject IMarkdownService MarkdownService
+
+<div class="blog-container">
+
+    <div class="add-post-section">
+        <button class="custom-btn primary" @onclick="ShowAddForm">새 포스트 추가</button>
+    </div>
+
+    @if (posts == null)
+    {
+        <p class="loading">로딩 중...</p>
+    }
+    else if (!posts.Any())
+    {
+        <p class="no-posts">포스트가 없습니다.</p>
+    }
+    else
+    {
+        @foreach (var post in posts)
+        {
+            <article class="post">
+                <div class="post-header">
+                    <div class="post-header-left">
+                        <h2 class="post-title">@post.Title</h2>
+                        <p class="post-meta"><span class="author">👤 @post.Author</span> <span class="date">📅 @post.Date.ToString("yyyy-MM-dd")</span></p>
+                    </div>
+                    <div class="post-actions">
+                        <button class="custom-btn warning icon" @onclick="() => EditPost(post)" title="수정">
+                            ✏️
+                        </button>
+                        <button class="custom-btn danger icon" @onclick="() => DeletePost(post.Id)" title="삭제">
+                            🗑️
+                        </button>
+                    </div>
+                </div>
+                <p class="post-summary">@((MarkupString)MarkdownService.ToHtml(post.Summary ?? ""))</p>
+                <div class="post-content">@((MarkupString)MarkdownService.ToHtml(post.Content ?? ""))</div>
+            </article>
+        }
+    }
+</div>
+
+@if (editingPost != null)
+{
+    <EditPostModal editingPost="@editingPost" IsNewPost="@isNewPost" OnUpdate="@UpdatePostFromModal" OnAdd="@AddPostFromModal" OnCancel="@CancelEdit" />
+}
+
+@code {
+    [Parameter]
+    public string? Id { get; set; }
+
+    private List<BlogPost>? posts;
+    private BlogPost? editingPost;
+    private bool isNewPost = false;
+    private BlogMeta? blogMeta;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (string.IsNullOrEmpty(Id))
+        {
+            Navigation.NavigateTo("/");
+            return;
+        }
+
+        await LoadPosts();
+        await LoadMeta();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
+        
+        if (posts != null && posts.Any())
+        {
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("enhanceMarkdownContent");
+                Console.WriteLine("enhanceMarkdownContent called successfully");
+                
+                // 이미지 갤러리 핸들러 새로고침
+                await JSRuntime.InvokeVoidAsync("ImageGallery.refreshImageHandlers");
+                Console.WriteLine("ImageGallery.refreshImageHandlers called successfully");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"JavaScript 함수 호출 실패: {ex.Message}");
+            }
+        }
+    }
+
+    private async Task LoadPosts()
+    {
+        if (string.IsNullOrEmpty(Id)) return;
+
+        posts = await BlogApiService.GetPostsAsync(Id) ?? new List<BlogPost>();
+    }
+
+    private async Task LoadMeta()
+    {
+        if (string.IsNullOrEmpty(Id)) return;
+
+        blogMeta = await BlogApiService.GetBlogMetaAsync(Id);
+        if (blogMeta == null)
+        {
+            blogMeta = new BlogMeta { Title = $"{Id} 블로그" };
+        }
+    }
+
+    private void ShowAddForm()
+    {
+        editingPost = new BlogPost
+        {
+            Id = Guid.NewGuid().ToString(),
+            Title = "",
+            Summary = "",
+            Content = "",
+            Author = Id ?? "",
+            Date = DateTime.Now
+        };
+        isNewPost = true;
+        StateHasChanged();
+    }
+
+    private void EditPost(BlogPost post)
+    {
+        Console.WriteLine($"EditPost called for post: {post.Title}");
+        editingPost = new BlogPost
+        {
+            Id = post.Id,
+            Title = post.Title,
+            Summary = post.Summary,
+            Content = post.Content,
+            Author = post.Author,
+            Date = post.Date
+        };
+        isNewPost = false;
+        Console.WriteLine($"editingPost set: {editingPost?.Title}");
+        StateHasChanged(); // UI 업데이트 강제 실행
+        Console.WriteLine("StateHasChanged called");
+    }
+
+    private void CancelEdit()
+    {
+        editingPost = null;
+        isNewPost = false;
+        StateHasChanged(); // UI 업데이트 강제 실행
+    }
+
+    private async Task AddPostFromModal(BlogPost newPost)
+    {
+        if (string.IsNullOrEmpty(Id) || newPost == null) 
+        {
+            Console.WriteLine($"AddPostFromModal: Id={Id}, newPost is null: {newPost == null}");
+            return;
+        }
+
+        Console.WriteLine($"AddPostFromModal: Adding new post with title: {newPost.Title}");
+        var success = await BlogApiService.AddPostAsync(Id, newPost);
+        Console.WriteLine($"AddPostFromModal: Add result: {success}");
+        
+        if (success)
+        {
+            editingPost = null;
+            isNewPost = false;
+            await LoadPosts();
+        }
+    }
+
+    private async Task UpdatePostFromModal(BlogPost updatedPost)
+    {
+        if (string.IsNullOrEmpty(Id) || updatedPost == null) 
+        {
+            Console.WriteLine($"UpdatePostFromModal: Id={Id}, updatedPost is null: {updatedPost == null}");
+            return;
+        }
+
+        Console.WriteLine($"UpdatePostFromModal: Updating post {updatedPost.Id} with title: {updatedPost.Title}");
+        var success = await BlogApiService.UpdatePostAsync(Id, updatedPost.Id, updatedPost);
+        Console.WriteLine($"UpdatePostFromModal: Update result: {success}");
+        
+        if (success)
+        {
+            editingPost = null;
+            isNewPost = false;
+            await LoadPosts();
+        }
+    }
+
+    private async Task DeletePost(string postId)
+    {
+        if (string.IsNullOrEmpty(Id)) return;
+
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "정말 삭제하시겠습니까?");
+        if (!confirmed) return;
+
+        var success = await BlogApiService.DeletePostAsync(Id, postId);
+        if (success)
+        {
+            await LoadPosts();
+        }
+    }
+}

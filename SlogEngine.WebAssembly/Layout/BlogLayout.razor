@@ -1,0 +1,165 @@
+@inherits LayoutComponentBase
+@inject IJSRuntime JSRuntime
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@inject BlogApiService BlogApiService
+@using SlogEngine.WebAssembly.Models
+@using SlogEngine.WebAssembly.Services
+@using SlogEngine.WebAssembly.Components
+
+<div class="blog-layout">
+    <header class="blog-header">
+        <div class="header-content">
+            <div class="left-nav">
+                <a href="/" class="nav-link" title="홈으로 가기">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                        <polyline points="9,22 9,12 15,12 15,22"></polyline>
+                    </svg>
+                </a>
+            </div>
+            <div class="center-title">
+                <h1 class="blog-title">@blogTitle</h1>
+                <button class="settings-btn" @onclick="ShowSettingsModal" title="블로그 설정">
+                    ⚙️
+                </button>
+            </div>
+            <div class="right-actions">
+                <div class="theme-switch-container">
+                    <span class="theme-label">☀️</span>
+                    <label class="theme-switch">
+                        <input type="checkbox" @bind="isDarkTheme" @bind:event="onchange" @bind:after="ToggleTheme" />
+                        <span class="slider"></span>
+                    </label>
+                    <span class="theme-label">🌙</span>
+                </div>
+            </div>
+            <button class="hamburger @hamburgerClass" @onclick="ToggleMenu" aria-label="메뉴 토글">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </header>
+
+    <main class="blog-main">
+        @Body
+    </main>
+
+    <footer class="blog-footer">
+        <p>&copy; 2025 SlogEngine. Made with ❤️</p>
+    </footer>
+
+    @if (showSettingsModal)
+    {
+        <Modal Title="블로그 설정" ShowActions="true" ConfirmText="저장" OnClose="HideSettingsModal" OnConfirm="UpdateMeta">
+            <ChildContent>
+                <EditForm Model="@editingMeta">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+
+                    <div class="form-group">
+                        <label for="meta-title">블로그 타이틀</label>
+                        <InputText id="meta-title" @bind-Value="editingMeta.Title" class="form-control" placeholder="블로그 제목을 입력하세요" />
+                    </div>
+                </EditForm>
+            </ChildContent>
+        </Modal>
+    }
+
+    <!-- 이미지 갤러리 컴포넌트 -->
+    <ImageGallery />
+</div>
+
+@code {
+    private bool showSettingsModal = false;
+    private bool isDarkTheme = false;
+    private BlogMeta editingMeta = new();
+    private bool menuOpen = false;
+    private string blogTitle = "블로그 타이틀";
+
+    private string menuOpenClass => menuOpen ? "menu-open" : "";
+    private string hamburgerClass => menuOpen ? "active" : "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        // 테마 상태 로드 (localStorage에서)
+        var theme = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "blogTheme");
+        isDarkTheme = theme == "dark";
+        UpdateTheme();
+
+        // 블로그 메타 정보 로드
+        await LoadBlogMeta();
+    }
+
+    private async Task LoadBlogMeta()
+    {
+        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+        var path = uri.AbsolutePath;
+        if (path.StartsWith("/blogs/"))
+        {
+            var segments = path.Split('/');
+            if (segments.Length >= 3)
+            {
+                var username = segments[2];
+                var meta = await BlogApiService.GetBlogMetaAsync(username);
+                blogTitle = meta?.Title ?? "블로그 타이틀";
+            }
+        }
+        else
+        {
+            blogTitle = "블로그 타이틀";
+        }
+    }
+
+    private void ShowSettingsModal()
+    {
+        // 현재 메타 로드
+        editingMeta = new BlogMeta { Title = blogTitle };
+        showSettingsModal = true;
+    }
+
+    private void HideSettingsModal()
+    {
+        showSettingsModal = false;
+    }
+
+    private void ToggleTheme()
+    {
+        UpdateTheme();
+        // 테마 상태 저장
+        JSRuntime.InvokeVoidAsync("localStorage.setItem", "blogTheme", isDarkTheme ? "dark" : "light");
+    }
+
+    private void UpdateTheme()
+    {
+        var themeName = isDarkTheme ? "dark" : "light";
+        JSRuntime.InvokeVoidAsync("eval", $"document.documentElement.setAttribute('data-theme', '{themeName}')");
+    }
+
+    private void ToggleMenu()
+    {
+        menuOpen = !menuOpen;
+    }
+
+    private async Task UpdateMeta()
+    {
+        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+        var path = uri.AbsolutePath;
+        if (path.StartsWith("/blogs/"))
+        {
+            var segments = path.Split('/');
+            if (segments.Length >= 3)
+            {
+                var username = segments[2];
+                var success = await BlogApiService.UpdateBlogMetaAsync(username, editingMeta);
+                if (success)
+                {
+                    blogTitle = editingMeta.Title;
+                    showSettingsModal = false;
+                    StateHasChanged();
+                }
+            }
+        }
+    }
+}

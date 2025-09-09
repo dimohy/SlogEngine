@@ -1,0 +1,1551 @@
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+#app {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    width: 100%;
+    background-color: var(--bg-color);
+}
+
+h1, h2, h3, h4, h5, h6 {
+    margin: 0 0 1rem 0;
+    font-weight: 600;
+}
+
+/* Layout */
+.app-layout {
+    display: flex;
+    min-height: 100vh;
+    position: relative;
+}
+
+.sidebar {
+    width: 256px;
+    background-color: var(--sidebar-bg);
+    color: var(--sidebar-text);
+    padding: 1rem;
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 1000;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+}
+
+.sidebar.sidebar-open {
+    transform: translateX(0);
+}
+
+.main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    margin-left: 0;
+    transition: margin-left 0.3s ease;
+}
+
+.top-bar {
+    background-color: var(--card-bg);
+    padding: 1rem;
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.content {
+    padding: 2rem;
+    flex: 1;
+}
+
+/* Responsive */
+@media (min-width: 769px) {
+    .sidebar {
+        position: static;
+        transform: translateX(0);
+        height: auto;
+    }
+
+    .main-content {
+        margin-left: 0;
+    }
+
+    .hamburger {
+        display: none;
+    }
+}
+
+@media (max-width: 768px) {
+    .hamburger {
+        display: flex;
+    }
+
+    .main-content {
+        margin-left: 0;
+    }
+
+    .content {
+        padding: 1rem;
+    }
+
+    .table {
+        font-size: 0.875rem;
+    }
+
+    html, body {
+        display: block; /* 모바일에서는 flexbox 해제 */
+        justify-content: unset;
+    }
+
+    #app {
+        max-width: 100%; /* 모바일에서는 전체 너비 사용 */
+        /* box-shadow removed */ /* 모바일에서는 그림자 제거 */
+        overflow: visible; /* 모바일에서는 overflow 해제 */
+    }
+}
+
+/* Loading Progress */
+.loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    text-align: center;
+}
+
+.loading-spinner {
+    width: 100px;
+    height: 100px;
+    color: var(--text-color);
+    animation: spin 1s linear infinite;
+}
+
+.loading-text {
+    margin-top: 1rem;
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: var(--text-color);
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Blazor Error UI */
+#blazor-error-ui {
+    color-scheme: light only;
+    background: lightyellow;
+    bottom: 0;
+    box-sizing: border-box;
+    display: none;
+    left: 0;
+    padding: 0.6rem 1.25rem 0.7rem 1.25rem;
+    position: fixed;
+    width: 100%;
+    z-index: 1000;
+}
+
+#blazor-error-ui .dismiss {
+    cursor: pointer;
+    position: absolute;
+    right: 0.75rem;
+    top: 0.5rem;
+}
+
+.blazor-error-boundary {
+    background: url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTYiIGhlaWdodD0iNDkiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIG92ZXJmbG93PSJoaWRkZW4iPjxkZWZzPjxjbGlwUGF0aCBpZD0iY2xpcDAiPjxyZWN0IHg9IjIzNSIgeT0iNTEiIHdpZHRoPSI1NiIgaGVpZ2h0PSI0OSIvPjwvY2xpcFBhdGg+PC9kZWZzPjxnIGNsaXAtcGF0aD0idXJsKCNjbGlwMCkiIHRyYW5zZm9ybT0idHJhbnNsYXRlKC0yMzUgLTUxKSI+PHBhdGggZD0iTTI2My41MDYgNTFDMjY0LjcxNyA1MSAyNjUuODEzIDUxLjQ4MzcgMjY2LjYwNiA1Mi4yNjU4TDI2Ny4wNTIgNTIuNzk4NyAyNjcuNTM5IDUzLjYyODMgMjkwLjE4NSA5Mi4xODMxIDI5MC41NDUgOTIuNzk1IDI5MC42NTYgOTIuOTk2QzI5MC44NzcgOTMuNTEzIDI5MSA5NC4wODE1IDI5MSA5NC42NzgyIDI5MSA5Ny4wNjUxIDI4OS4wMzggOTkgMjg2LjYxNyA5OUwyNDAuMzgzIDk5QzIzNy45NjMgOTkgMjM2IDk3LjA2NTEgMjM2IDk0LjY3ODIgMjM2IDk0LjM3OTkgMjM2LjAzMSA5NC4wODg2IDIzNi4wODkgOTMuODA3MkwyMzYuMzM4IDkzLjAxNjIgMjM2Ljg1OCA5Mi4xMzE0IDI1OS40NzMgNTMuNjI5NCAyNTkuOTYxIDUyLjc5ODUgMjYwLjQwNyA1Mi4yNjU4QzI2MS4yIDUxLjQ4MzcgMjYyLjI5NiA1MSAyNjMuNTA2IDUxWk0yNjMuNTg2IDY2LjAxODNDMjYwLjczNyA2Ni4wMTgzIDI1OS4zMTMgNjcuMTI0NSAyNTkuMzEzIDY5LjMzNyAyNTkuMzEzIDY5LjYxMDIgMjU5LjMzMiA2OS44NjA4IDI1OS4zNzEgNzAuMDg4N0wyNjEuNzk1IDg0LjAxNjEgMjY1LjM4IDg0LjAxNjEgMjY3LjgyMSA2OS43NDc1QzI2Ny44NiA2OS43MzA5IDI2Ny44NzkgNjkuNTg3NyAyNjcuODc5IDY5LjMxNzkgMjY3Ljg3OSA2Ny4xMTgyIDI2Ni40NDggNjYuMDE4MyAyNjMuNTg2IDY2LjAxODNaTTI2My41NzYgODYuMDU0N0MyNjEuMDQ5IDg2LjA1NDcgMjU5Ljc4NiA4Ny4zMDA1IDI1OS43ODYgODkuNzkyMSAyNTkuNzg2IDkyLjI4MzcgMjYxLjA0OSA5My41Mjk1IDI2My41NzYgOTMuNTI5NSAyNjYuMTE2IDkzLjUyOTUgMjY3LjM4NyA5Mi4yODM3IDI2Ny4zODcgODkuNzkyMSAyNjcuMzg3IDg3LjMwMDUgMjY2LjExNiA4Ni4wNTQ3IDI2My41NzYgODYuMDU0N1oiIGZpbGw9IiNGRkU1MDAiIGZpbGwtcnVsZT0iZXZlbm9kZCIvPjwvZz48L3N2Zz4=) no-repeat 1rem/1.8rem, #b32121;
+    padding: 1rem 1rem 1rem 3.7rem;
+    color: white;
+}
+
+.blazor-error-boundary::after {
+    content: "An error has occurred.";
+}
+
+/* 반응형 웹 설정 - 데스크탑 최대 1200px, 모바일 100% */
+/* Mobile First - 기본은 100% 너비 */
+#app {
+    width: 100%;
+    max-width: 100%;
+}
+
+/* 소형 태블릿 (576px 이상) */
+@media (min-width: 576px) {
+    #app {
+        max-width: 540px;
+    }
+}
+
+/* 태블릿 (768px 이상) */
+@media (min-width: 768px) {
+    #app {
+        max-width: 720px;
+    }
+}
+
+/* 데스크탑 (992px 이상) */
+@media (min-width: 992px) {
+    #app {
+        max-width: 960px;
+    }
+}
+
+/* 대형 데스크탑 (1200px 이상) - 최대 1200px */
+@media (min-width: 1200px) {
+    #app {
+        max-width: 1200px;
+    }
+}
+
+/* 라이트 테마 색상 시스템 */
+:root {
+    --bg-color: #f8fafc;
+    --text-color: #334155;
+    --sidebar-bg: #0ea5e9;
+    --sidebar-text: #ffffff;
+    --card-bg: #ffffff;
+    --btn-secondary-bg: #e2e8f0;
+    --btn-secondary-color: #475569;
+    --table-header-bg: #f1f5f9;
+    --table-header-color: #475569;
+    --table-row-hover: #f8fafc;
+    --header-bg: linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%);
+    --header-text: #ffffff;
+    --nav-link-hover: #dbeafe;
+    --modal-bg: rgba(15, 23, 42, 0.5);
+    --modal-content-bg: #ffffff;
+    --layout-bg: linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%);
+    --footer-bg: rgba(15, 165, 233, 0.9);
+    --footer-text: #ffffff;
+    --text-muted: #64748b;
+    --border-color: rgba(0, 0, 0, 0.12);
+    --input-bg: rgba(255, 255, 255, 0.8);
+    --input-border: #e2e8f0;
+    --input-focus-bg: #ffffff;
+    --input-focus-border: #0ea5e9;
+    --label-color: #2d3748;
+    /* 코드 블록과 표를 위한 추가 색상 - 라이트 테마 톤 다운 */
+    --code-bg: #f1f5f9;
+    --code-border: #e2e8f0;
+    --code-text: #be185d; /* 좀 더 진한 핑크 */
+    --pre-bg: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%); /* 라이트 테마에서 더 밝은 배경 */
+    --pre-border: #cbd5e1;
+    --pre-text: #1f2937; /* 라이트 테마에서 더 진한 텍스트 */
+    --table-stripe: rgba(79, 172, 254, 0.02);
+    --table-hover: rgba(79, 172, 254, 0.05);
+}
+
+/* 다크 테마 색상 시스템 */
+[data-theme="dark"],
+.dark-theme,
+:root.dark-theme,
+body.dark-theme {
+    --bg-color: #0f172a;
+    --text-color: #e2e8f0;
+    --sidebar-bg: #1e293b;
+    --sidebar-text: #e2e8f0;
+    --card-bg: #1e293b;
+    --btn-secondary-bg: #334155;
+    --btn-secondary-color: #cbd5e1;
+    --table-header-bg: #334155;
+    --table-header-color: #cbd5e1;
+    --table-row-hover: #475569;
+    --header-bg: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    --header-text: #e2e8f0;
+    --nav-link-hover: #334155;
+    --modal-bg: rgba(15, 23, 42, 0.8);
+    --modal-content-bg: #1e293b;
+    --layout-bg: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    --footer-bg: rgba(30, 41, 59, 0.9);
+    --footer-text: #e2e8f0;
+    --text-muted: #94a3b8;
+    --border-color: rgba(255, 255, 255, 0.15);
+    --input-bg: rgba(30, 41, 59, 0.8);
+    --input-border: #475569;
+    --input-focus-bg: #1e293b;
+    --input-focus-border: #0ea5e9;
+    --label-color: #cbd5e1;
+    /* 다크 테마 코드 블록과 표 색상 - 다크 테마 톤 업 */
+    --code-bg: #374151; /* 더 밝은 회색 배경 */
+    --code-border: #6b7280; /* 더 밝은 테두리 */
+    --code-text: #fbbf24; /* 더 밝은 노란색 */
+    --pre-bg: linear-gradient(135deg, #1f2937 0%, #111827 100%); /* 다크 테마에서 더 어두운 그라데이션 */
+    --pre-border: #6b7280; /* 더 밝은 테두리 */
+    --pre-text: #f9fafb; /* 다크 테마에서 더 밝은 텍스트 */
+    --table-stripe: rgba(255, 255, 255, 0.02);
+    --table-hover: rgba(255, 255, 255, 0.05);
+}
+
+body.dark-theme,
+html.dark-theme {
+    background-color: #0f172a !important;
+    color: #e2e8f0 !important;
+}
+
+body.light-theme,
+html.light-theme {
+    background-color: #f8fafc !important;
+    color: #334155 !important;
+}
+
+.dark-theme .nav-link:hover,
+:root.dark-theme .nav-link:hover {
+    background-color: #4a5568;
+}
+
+.dark-theme .nav-link.active,
+:root.dark-theme .nav-link.active {
+    background-color: #4299e1;
+}
+
+.dark-theme .btn-secondary:hover,
+:root.dark-theme .btn-secondary:hover {
+    background-color: #5a6c7d;
+}
+
+/* Theme Toggle Button */
+.theme-toggle {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+    transition: background-color 0.2s;
+}
+
+.theme-toggle:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.dark-theme .theme-toggle:hover,
+:root.dark-theme .theme-toggle:hover {
+    background-color: rgba(0, 0, 0, 0.2);
+}
+
+/* 반응형 웹 설정 - 데스크탑 최대 1200px, 모바일 100% */
+/* Mobile First - 기본은 100% 너비 */
+
+#app {
+    width: 100%;
+    max-width: 100%;
+}
+
+
+
+
+
+
+
+
+
+
+
+/* 소형 태블릿 (576px 이상) */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* Custom Button Styles - Bootstrap 대체 */
+.custom-btn {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    margin: 0;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1), 
+                0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.custom-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
+}
+
+.custom-btn:hover::before {
+    left: 100%;
+}
+
+.custom-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15), 
+                0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.custom-btn.primary {
+    background: rgba(14, 165, 233, 0.8);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(14, 165, 233, 0.3);
+    color: white;
+}
+
+.custom-btn.primary:hover {
+    background: rgba(2, 132, 199, 0.9);
+    border-color: rgba(2, 132, 199, 0.4);
+    transform: translateY(-2px);
+}
+
+.custom-btn.success {
+    background: rgba(16, 185, 129, 0.8);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    color: white;
+}
+
+.custom-btn.success:hover {
+    background: rgba(5, 150, 105, 0.9);
+    border-color: rgba(5, 150, 105, 0.4);
+    transform: translateY(-2px);
+}
+
+.custom-btn.warning {
+    background: rgba(245, 158, 11, 0.8);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    color: white;
+}
+
+.custom-btn.warning:hover {
+    background: rgba(251, 191, 36, 0.9);
+    border-color: rgba(251, 191, 36, 0.4);
+    transform: translateY(-2px);
+}
+
+.custom-btn.danger {
+    background: rgba(239, 68, 68, 0.8);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: white;
+}
+
+.custom-btn.danger:hover {
+    background: rgba(248, 113, 113, 0.9);
+    border-color: rgba(248, 113, 113, 0.4);
+    transform: translateY(-2px);
+}
+
+.custom-btn.secondary {
+    background: rgba(100, 116, 139, 0.8);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(100, 116, 139, 0.3);
+    color: white;
+}
+
+.custom-btn.secondary:hover {
+    background: rgba(71, 85, 105, 0.9);
+    border-color: rgba(71, 85, 105, 0.4);
+    transform: translateY(-2px);
+}
+
+.custom-btn.icon {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-size: 16px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* 페이지별 컨테이너 스타일 */
+.blog-list-container,
+.counter-container, 
+.weather-container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 2.5rem;
+    background: var(--card-bg);
+    border-radius: 15px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+    border: 1.5px solid var(--border-color);
+}
+
+.page-title {
+    color: var(--text-color);
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 2rem;
+}
+
+.page-description {
+    color: var(--text-color);
+    font-size: 1.1rem;
+    margin-bottom: 2rem;
+}
+
+.loading-message,
+.empty-message {
+    text-align: center;
+    color: var(--text-muted);
+    font-style: italic;
+    font-size: 1.1rem;
+    padding: 2rem;
+}
+
+.post-card {
+    background: var(--card-bg);
+    padding: 2rem;
+    margin-bottom: 1.5rem;
+    border-radius: 15px;
+    border: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+}
+
+.post-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+.post-card h2 {
+    color: var(--text-color);
+    margin-bottom: 1rem;
+    font-size: 1.4rem;
+    font-weight: 600;
+}
+
+.post-meta {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-top: 1rem;
+}
+
+.add-post-section {
+    text-align: right;
+    margin-bottom: 2rem;
+}
+
+.count-display {
+    font-size: 1.2rem;
+    margin-bottom: 1.5rem;
+}
+
+.count-value {
+    font-weight: 600;
+    color: var(--sidebar-bg);
+}
+
+.btn-icon:hover {
+    transform: translateY(-2px) scale(1.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.edit-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(5px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.modal-content {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    padding: 3rem;
+    border-radius: 20px;
+    width: 90%;
+    max-width: 600px;
+    animation: modalSlideIn 0.4s ease-out;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-50px) scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Global Form Styles - Bootstrap 대체용 예쁜 폼 스타일 */
+.form-group {
+    margin-bottom: 1.5rem;
+    position: relative;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.75rem;
+    font-weight: 600;
+    color: var(--label-color);
+    font-size: 1rem;
+    position: relative;
+}
+
+/* 기본 폼 컨트롤 스타일 */
+.form-control,
+input[type="text"],
+input[type="email"], 
+input[type="password"],
+input[type="number"],
+input[type="url"],
+input[type="search"],
+input[type="tel"],
+input[type="date"],
+input[type="datetime-local"],
+input[type="month"],
+input[type="week"],
+input[type="time"],
+textarea,
+select {
+    width: 100%;
+    padding: 1rem 1.25rem;
+    border: 2px solid var(--input-border);
+    border-radius: 12px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    background: var(--input-bg);
+    color: var(--text-color);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06), 
+                0 1px 4px rgba(0, 0, 0, 0.04);
+    font-family: inherit;
+    box-sizing: border-box;
+}
+
+.form-control:focus,
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="number"]:focus,
+input[type="url"]:focus,
+input[type="search"]:focus,
+input[type="tel"]:focus,
+input[type="date"]:focus,
+input[type="datetime-local"]:focus,
+input[type="month"]:focus,
+input[type="week"]:focus,
+input[type="time"]:focus,
+textarea:focus,
+select:focus {
+    outline: none;
+    border-color: var(--input-focus-border);
+    background: var(--input-focus-bg);
+    box-shadow: 0 4px 16px rgba(14, 165, 233, 0.15), 
+                0 2px 8px rgba(14, 165, 233, 0.1),
+                0 1px 4px rgba(0, 0, 0, 0.06);
+    transform: translateY(-1px);
+}
+
+.form-control::placeholder,
+input::placeholder,
+textarea::placeholder {
+    color: var(--text-muted);
+    opacity: 0.7;
+}
+
+/* 텍스트 영역 특별 스타일 */
+textarea.form-control,
+textarea {
+    resize: vertical;
+    min-height: 120px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    line-height: 1.6;
+}
+
+/* 입력 필드 개선 스타일 */
+.form-control:hover,
+input:hover,
+textarea:hover,
+select:hover {
+    border-color: var(--input-focus-border);
+    box-shadow: 0 2px 8px rgba(14, 165, 233, 0.1);
+}
+
+/* 텍스트 영역 스크롤바 스타일링 */
+textarea.form-control::-webkit-scrollbar,
+textarea::-webkit-scrollbar {
+    width: 8px;
+}
+
+textarea.form-control::-webkit-scrollbar-track,
+textarea::-webkit-scrollbar-track {
+    background: var(--input-bg);
+    border-radius: 4px;
+}
+
+textarea.form-control::-webkit-scrollbar-thumb,
+textarea::-webkit-scrollbar-thumb {
+    background: var(--input-border);
+    border-radius: 4px;
+}
+
+textarea.form-control::-webkit-scrollbar-thumb:hover,
+textarea::-webkit-scrollbar-thumb:hover {
+    background: var(--input-focus-border);
+}
+
+/* 폼 그룹 애니메이션 */
+.form-group {
+    animation: slideInUp 0.3s ease-out;
+}
+
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 라벨 포커스 효과 */
+.form-control:focus + label,
+.form-control:focus ~ label,
+input:focus + label,
+input:focus ~ label,
+textarea:focus + label,
+textarea:focus ~ label {
+    color: var(--input-focus-border);
+}
+
+/* 입력 필드 비어있지 않을 때 스타일 */
+.form-control:not(:placeholder-shown),
+input:not(:placeholder-shown),
+textarea:not(:placeholder-shown) {
+    border-color: var(--input-focus-border);
+}
+
+/* 유효성 검사 스타일 */
+.validation-message {
+    color: #ef4444;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+}
+
+.field-validation-error {
+    color: #ef4444;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+}
+
+.validation-summary {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.validation-summary ul {
+    margin: 0;
+    padding-left: 1.5rem;
+    color: #dc2626;
+}
+
+/* 다크 테마에서 유효성 검사 스타일 */
+:root.dark-theme .validation-summary,
+.dark-theme .validation-summary {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.3);
+}
+
+:root.dark-theme .validation-summary ul,
+.dark-theme .validation-summary ul {
+    color: #f87171;
+}
+
+/* Select 박스 화살표 스타일링 */
+select {
+    background-image: url("data:image/svg+xml;charset=UTF-8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z' fill='%23475569'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    background-size: 1.5rem;
+    appearance: none;
+    padding-right: 3rem;
+}
+
+/* 다크 테마용 Select 화살표 */
+:root.dark-theme select,
+.dark-theme select {
+    background-image: url("data:image/svg+xml;charset=UTF-8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z' fill='%23cbd5e1'/></svg>");
+}
+
+/* 체크박스와 라디오 버튼 스타일링 */
+input[type="checkbox"],
+input[type="radio"] {
+    width: auto;
+    height: 1.2rem;
+    margin-right: 0.5rem;
+    accent-color: var(--input-focus-border);
+    cursor: pointer;
+    border-radius: 4px;
+    box-shadow: none;
+    transform: none;
+    padding: 0;
+}
+
+input[type="checkbox"]:focus,
+input[type="radio"]:focus {
+    outline: 2px solid var(--input-focus-border);
+    outline-offset: 2px;
+    transform: none;
+    box-shadow: none;
+}
+
+/* 파일 업로드 입력 스타일 */
+input[type="file"] {
+    padding: 0.75rem;
+    border: 2px dashed var(--input-border);
+    background: var(--input-bg);
+    cursor: pointer;
+}
+
+input[type="file"]:hover {
+    border-color: var(--input-focus-border);
+    background: var(--input-focus-bg);
+}
+
+input[type="file"]:focus {
+    outline: none;
+    border-color: var(--input-focus-border);
+    box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+}
+
+/* 모바일 반응형 스타일 */
+@media (max-width: 768px) {
+    .form-control,
+    input,
+    textarea,
+    select {
+        font-size: 16px; /* iOS에서 줌 방지 */
+        padding: 0.875rem 1rem;
+    }
+}
+
+/* 모바일 반응형 스타일 */
+@media (max-width: 768px) {
+    .header-content {
+        padding: 1rem;
+    }
+
+    .right-actions {
+        gap: 0.25rem;
+    }
+
+    .hamburger {
+        display: flex;
+    }
+
+    .modal-content {
+        width: 98%;
+        max-width: none;
+        margin: 0.5rem;
+        max-height: 95vh;
+    }
+}
+
+@media (max-width: 480px) {
+    .btn {
+        padding: 0.6rem 1.2rem;
+        font-size: 0.85rem;
+    }
+
+    .btn-icon {
+        width: 32px;
+        height: 32px;
+        font-size: 14px;
+    }
+
+
+
+    .modal-content {
+        width: 98%;
+        max-width: none;
+        margin: 0.5rem;
+        max-height: 95vh;
+        border-radius: 15px;
+    }
+
+    .modal-header {
+        padding: 0.75rem 1rem 0.5rem;
+    }
+
+    .modal-header h3 {
+        font-size: 1.25rem;
+    }
+
+    .modal-body {
+        padding: 0.75rem 1rem;
+    }
+}
+
+/* 코드 블록 헤더 스타일 - 전역 적용 */
+.code-block-header {
+    display: block;
+    position: relative;
+    background: transparent;
+    border: none;
+    padding: 0;
+    font-size: 0.85rem;
+    pointer-events: none;
+    height: 0;
+    overflow: visible;
+}
+
+/* 코드 블록 언어 레이블 스타일 */
+.code-language-label {
+    font-size: 0.6rem !important;
+    font-weight: 700 !important;
+    color: var(--text-color) !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1px !important;
+    background: rgba(0, 0, 0, 0.15) !important;
+    backdrop-filter: blur(10px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    border-radius: 0 0 6px 0 !important;
+    padding: 0.35rem 0.7rem !important;
+    position: absolute !important;
+    top: -48px !important;
+    left: -20px !important;
+    pointer-events: auto !important;
+    opacity: 0.8 !important;
+    transition: all 0.2s ease !important;
+    z-index: 10 !important;
+}
+
+.code-language-label:hover {
+    opacity: 1 !important;
+    background: rgba(0, 0, 0, 0.25) !important;
+}
+
+/* 코드 복사 버튼 스타일 */
+.code-copy-button {
+    background: rgba(0, 0, 0, 0.15) !important;
+    backdrop-filter: blur(10px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    border-radius: 6px 0 0 6px !important;
+    color: var(--text-color) !important;
+    font-size: 14px !important;
+    padding: 0.5rem !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    width: 36px !important;
+    height: 36px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    opacity: 0.7 !important;
+    position: absolute !important;
+    top: -48px !important;
+    right: -20px !important;
+    pointer-events: auto !important;
+    z-index: 10 !important;
+}
+
+.code-copy-button:hover {
+    background: rgba(0, 0, 0, 0.25) !important;
+    opacity: 1 !important;
+    transform: translateX(-2px) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+}
+
+.code-copy-button:active {
+    transform: translateX(0) !important;
+    box-shadow: none !important;
+}
+
+.code-copy-button svg {
+    width: 16px !important;
+    height: 16px !important;
+    fill: currentColor !important;
+}
+
+/* pre 요소에 코드 블록 헤더를 위한 패딩 추가 */
+.post-summary pre, .post-content pre {
+    background: var(--pre-bg) !important;
+    padding: 1.25rem !important;
+    border-radius: 8px !important;
+    overflow-x: auto !important;
+    margin: 1.5rem 0 !important;
+    border: 1px solid var(--pre-border) !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05) !important;
+    position: relative !important;
+    color: var(--pre-text) !important;
+    padding-top: 3rem !important;
+}
+
+.post-summary pre code, .post-content pre code {
+    background-color: transparent !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    border: none !important;
+    color: inherit !important;
+    font-weight: normal !important;
+    font-size: inherit !important;
+    line-height: inherit !important;
+    white-space: pre !important;
+    font-family: inherit !important;
+    display: block !important;
+    overflow-x: auto !important;
+}
+
+/* 다크 테마에서의 코드 블록 헤더 */
+body.dark-theme .code-language-label,
+:root.dark-theme .code-language-label {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border-color: rgba(255, 255, 255, 0.15) !important;
+    color: #f8fafc !important;
+}
+
+body.dark-theme .code-language-label:hover,
+:root.dark-theme .code-language-label:hover {
+    background: rgba(255, 255, 255, 0.2) !important;
+}
+
+body.dark-theme .code-copy-button,
+:root.dark-theme .code-copy-button {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border-color: rgba(255, 255, 255, 0.15) !important;
+    color: #f8fafc !important;
+}
+
+body.dark-theme .code-copy-button:hover,
+:root.dark-theme .code-copy-button:hover {
+    background: rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Prism.js 커스텀 스타일 */
+.post-summary pre[class*="language-"], .post-content pre[class*="language-"] {
+    background: var(--pre-bg) !important;
+    margin: 1.5rem 0 !important;
+    border: 1px solid var(--pre-border) !important;
+    border-radius: 8px !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05) !important;
+    color: var(--pre-text) !important;
+    position: relative !important;
+    padding: 1.25rem !important;
+    padding-top: 3rem !important;
+}
+
+.post-summary code[class*="language-"], .post-content code[class*="language-"] {
+    background: transparent !important;
+    color: var(--pre-text) !important;
+    text-shadow: none !important;
+    font-family: 'Fira Code', 'JetBrains Mono', 'Cascadia Code', 'Source Code Pro', 'Courier New', monospace !important;
+}
+
+/* 마크다운 테이블 스타일 - 전역 적용 */
+.post-summary table, .post-content table {
+    width: 100% !important;
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+    margin: 2rem 0 !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), 
+                0 4px 16px rgba(0, 0, 0, 0.04),
+                0 2px 8px rgba(0, 0, 0, 0.02) !important;
+    border-radius: 12px !important;
+    overflow: hidden !important;
+    background-color: var(--card-bg) !important;
+    border: 1px solid var(--border-color) !important;
+    backdrop-filter: blur(10px) !important;
+}
+
+.post-summary th, .post-content th {
+    background: linear-gradient(135deg, 
+                var(--table-header-bg) 0%, 
+                rgba(14, 165, 233, 0.05) 50%,
+                rgba(79, 172, 254, 0.08) 100%) !important;
+    color: var(--text-color) !important;
+    font-weight: 700 !important;
+    font-size: 0.85rem !important;
+    letter-spacing: 0.8px !important;
+    text-transform: uppercase !important;
+    padding: 1.25rem 1.5rem !important;
+    text-align: left !important;
+    vertical-align: middle !important;
+    border: none !important;
+    border-bottom: 2px solid var(--sidebar-bg) !important;
+    position: relative !important;
+}
+
+.post-summary th:first-child, .post-content th:first-child {
+    border-top-left-radius: 12px !important;
+}
+
+.post-summary th:last-child, .post-content th:last-child {
+    border-top-right-radius: 12px !important;
+}
+
+.post-summary td, .post-content td {
+    background-color: var(--card-bg) !important;
+    color: var(--text-color) !important;
+    padding: 1rem 1.5rem !important;
+    text-align: left !important;
+    vertical-align: middle !important;
+    border: none !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.03) !important;
+    transition: all 0.3s ease !important;
+    position: relative !important;
+}
+
+.post-summary tr:nth-child(even) td, .post-content tr:nth-child(even) td {
+    background: linear-gradient(135deg, 
+                var(--table-stripe) 0%, 
+                rgba(0, 0, 0, 0.008) 100%) !important;
+}
+
+.post-summary tr:hover td, .post-content tr:hover td {
+    background: linear-gradient(135deg, 
+                var(--table-hover) 0%, 
+                rgba(14, 165, 233, 0.03) 100%) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+}
+
+.post-summary tr:last-child td:first-child, .post-content tr:last-child td:first-child {
+    border-bottom-left-radius: 12px !important;
+}
+
+.post-summary tr:last-child td:last-child, .post-content tr:last-child td:last-child {
+    border-bottom-right-radius: 12px !important;
+}
+
+.post-summary tr:last-child td, .post-content tr:last-child td {
+    border-bottom: none !important;
+}
+
+/* 다크 테마에서의 테이블 스타일 */
+body.dark-theme .post-summary table, body.dark-theme .post-content table,
+:root.dark-theme .post-summary table, :root.dark-theme .post-content table {
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 
+                0 4px 16px rgba(0, 0, 0, 0.2),
+                0 2px 8px rgba(0, 0, 0, 0.1) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+body.dark-theme .post-summary th, body.dark-theme .post-content th,
+:root.dark-theme .post-summary th, :root.dark-theme .post-content th {
+    background: linear-gradient(135deg, 
+                rgba(255, 255, 255, 0.08) 0%, 
+                rgba(14, 165, 233, 0.12) 50%,
+                rgba(79, 172, 254, 0.15) 100%) !important;
+    border-bottom-color: rgba(14, 165, 233, 0.4) !important;
+}
+
+body.dark-theme .post-summary td, body.dark-theme .post-content td,
+:root.dark-theme .post-summary td, :root.dark-theme .post-content td {
+    border-bottom-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+body.dark-theme .post-summary tr:nth-child(even) td, body.dark-theme .post-content tr:nth-child(even) td,
+:root.dark-theme .post-summary tr:nth-child(even) td, :root.dark-theme .post-content tr:nth-child(even) td {
+    background: linear-gradient(135deg, 
+                rgba(255, 255, 255, 0.02) 0%, 
+                rgba(0, 0, 0, 0.05) 100%) !important;
+}
+
+body.dark-theme .post-summary tr:hover td, body.dark-theme .post-content tr:hover td,
+:root.dark-theme .post-summary tr:hover td, :root.dark-theme .post-content tr:hover td {
+    background: linear-gradient(135deg, 
+                rgba(14, 165, 233, 0.08) 0%, 
+                rgba(79, 172, 254, 0.05) 100%) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+}
+
+/* 반응형 테이블 스타일 */
+.table-wrapper {
+    overflow-x: auto !important;
+    margin: 2rem 0 !important;
+    border-radius: 12px !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08) !important;
+    background: var(--card-bg) !important;
+    backdrop-filter: blur(10px) !important;
+}
+
+.table-wrapper table {
+    margin: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+}
+
+@media (max-width: 768px) {
+    .post-summary table, .post-content table {
+        font-size: 0.9rem !important;
+        margin: 1.5rem 0 !important;
+    }
+    
+    .post-summary th, .post-content th {
+        padding: 1rem !important;
+        font-size: 0.8rem !important;
+    }
+    
+    .post-summary td, .post-content td {
+        padding: 0.875rem 1rem !important;
+        min-width: 120px !important;
+    }
+}
+
+/* 마크다운 링크 스타일 - 전역 적용 */
+.post-summary a, .post-content a {
+    color: #0ea5e9 !important;
+    text-decoration: none !important;
+    font-weight: 500 !important;
+    position: relative !important;
+    padding: 0.1rem 0.25rem !important;
+    border-radius: 4px !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    background: linear-gradient(135deg, 
+                rgba(14, 165, 233, 0.05) 0%, 
+                rgba(59, 130, 246, 0.03) 100%) !important;
+    border: 1px solid rgba(14, 165, 233, 0.1) !important;
+    display: inline-block !important;
+    transform: translateY(0) !important;
+}
+
+.post-summary a:hover, .post-content a:hover {
+    color: #0284c7 !important;
+    text-decoration: none !important;
+    background: linear-gradient(135deg, 
+                rgba(14, 165, 233, 0.12) 0%, 
+                rgba(59, 130, 246, 0.08) 100%) !important;
+    border-color: rgba(14, 165, 233, 0.25) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 12px rgba(14, 165, 233, 0.15), 
+                0 2px 6px rgba(14, 165, 233, 0.1) !important;
+}
+
+.post-summary a:active, .post-content a:active {
+    transform: translateY(0) !important;
+    box-shadow: 0 2px 6px rgba(14, 165, 233, 0.1) !important;
+}
+
+.post-summary a::before, .post-content a::before {
+    content: '' !important;
+    position: absolute !important;
+    bottom: 0 !important;
+    left: 50% !important;
+    width: 0 !important;
+    height: 2px !important;
+    background: linear-gradient(90deg, #0ea5e9, #3b82f6) !important;
+    transition: all 0.3s ease !important;
+    transform: translateX(-50%) !important;
+    border-radius: 2px !important;
+}
+
+.post-summary a:hover::before, .post-content a:hover::before {
+    width: calc(100% - 0.5rem) !important;
+}
+
+/* 다크 테마에서의 링크 스타일 */
+body.dark-theme .post-summary a, body.dark-theme .post-content a,
+:root.dark-theme .post-summary a, :root.dark-theme .post-content a {
+    color: #38bdf8 !important;
+    background: linear-gradient(135deg, 
+                rgba(56, 189, 248, 0.08) 0%, 
+                rgba(14, 165, 233, 0.05) 100%) !important;
+    border-color: rgba(56, 189, 248, 0.15) !important;
+}
+
+body.dark-theme .post-summary a:hover, body.dark-theme .post-content a:hover,
+:root.dark-theme .post-summary a:hover, :root.dark-theme .post-content a:hover {
+    color: #0ea5e9 !important;
+    background: linear-gradient(135deg, 
+                rgba(56, 189, 248, 0.15) 0%, 
+                rgba(14, 165, 233, 0.12) 100%) !important;
+    border-color: rgba(56, 189, 248, 0.3) !important;
+    box-shadow: 0 4px 12px rgba(56, 189, 248, 0.2), 
+                0 2px 6px rgba(56, 189, 248, 0.15) !important;
+}
+
+body.dark-theme .post-summary a::before, body.dark-theme .post-content a::before,
+:root.dark-theme .post-summary a::before, :root.dark-theme .post-content a::before {
+    background: linear-gradient(90deg, #38bdf8, #0ea5e9) !important;
+}
+
+/* 외부 링크 아이콘 */
+.post-summary a[href^="http"]::after, .post-content a[href^="http"]::after {
+    content: '↗' !important;
+    font-size: 0.75em !important;
+    margin-left: 0.25rem !important;
+    opacity: 0.6 !important;
+    transition: opacity 0.2s ease !important;
+}
+
+.post-summary a[href^="http"]:hover::after, .post-content a[href^="http"]:hover::after {
+    opacity: 1 !important;
+}
+
+/* 코드 블록 내 링크 스타일 */
+.post-summary pre a, .post-content pre a,
+.post-summary code a, .post-content code a {
+    color: inherit !important;
+    background: rgba(14, 165, 233, 0.1) !important;
+    border: 1px solid rgba(14, 165, 233, 0.2) !important;
+    padding: 0.1rem 0.3rem !important;
+    border-radius: 3px !important;
+}
+
+.post-summary pre a:hover, .post-content pre a:hover,
+.post-summary code a:hover, .post-content code a:hover {
+    background: rgba(14, 165, 233, 0.2) !important;
+    border-color: rgba(14, 165, 233, 0.4) !important;
+}
+
+/* 모바일에서의 링크 스타일 */
+@media (max-width: 768px) {
+    .post-summary a, .post-content a {
+        padding: 0.15rem 0.3rem !important;
+        font-size: 0.95rem !important;
+    }
+}
+
+/* 인라인 코드 스타일 - 테마별 최적화 */
+.post-summary code:not([class*="language-"]), .post-content code:not([class*="language-"]) {
+    background: linear-gradient(135deg, var(--code-bg) 0%, rgba(14, 165, 233, 0.08) 100%) !important;
+    color: var(--code-text) !important;
+    padding: 0.25rem 0.6rem !important;
+    border-radius: 6px !important;
+    font-family: 'Fira Code', 'JetBrains Mono', 'Cascadia Code', 'Source Code Pro', 'Courier New', monospace !important;
+    font-size: 0.875em !important;
+    font-weight: 600 !important;
+    border: 1px solid var(--code-border) !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 
+                inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+    letter-spacing: 0.02em !important;
+    position: relative !important;
+    display: inline-block !important;
+    transition: all 0.2s ease !important;
+}
+
+.post-summary code:not([class*="language-"]):hover, .post-content code:not([class*="language-"]):hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15), 
+                inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+    background: linear-gradient(135deg, var(--code-bg) 0%, rgba(14, 165, 233, 0.12) 100%) !important;
+}
+
+/* 다크 테마에서의 인라인 코드 */
+body.dark-theme .post-summary code:not([class*="language-"]), body.dark-theme .post-content code:not([class*="language-"]),
+:root.dark-theme .post-summary code:not([class*="language-"]), :root.dark-theme .post-content code:not([class*="language-"]) {
+    background: linear-gradient(135deg, var(--code-bg) 0%, rgba(59, 130, 246, 0.15) 100%) !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), 
+                inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+    border-color: rgba(59, 130, 246, 0.3) !important;
+}
+
+body.dark-theme .post-summary code:not([class*="language-"]):hover, body.dark-theme .post-content code:not([class*="language-"]):hover,
+:root.dark-theme .post-summary code:not([class*="language-"]):hover, :root.dark-theme .post-content code:not([class*="language-"]):hover {
+    background: linear-gradient(135deg, var(--code-bg) 0%, rgba(59, 130, 246, 0.2) 100%) !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4), 
+                inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
+}
+
+/* 포스트 콘텐츠 헤딩 스타일 - CSS 아이솔레이션 우회 */
+.post-content h1 {
+    font-size: 1.7rem !important;
+    font-weight: 700 !important;
+    line-height: 1.2 !important;
+    margin-top: 1.5rem !important;
+    margin-bottom: 0.75rem !important;
+    color: var(--text-color) !important;
+}
+
+.post-content h2 {
+    font-size: 1.5rem !important;
+    font-weight: 650 !important;
+    line-height: 1.25 !important;
+    margin-top: 1.5rem !important;
+    margin-bottom: 0.75rem !important;
+    color: var(--text-color) !important;
+}
+
+.post-content h3 {
+    font-size: 1.3rem !important;
+    font-weight: 620 !important;
+    line-height: 1.3 !important;
+    margin-top: 1.5rem !important;
+    margin-bottom: 0.75rem !important;
+    color: var(--text-color) !important;
+}
+
+.post-content h4 {
+    font-size: 1.15rem !important;
+    font-weight: 600 !important;
+    line-height: 1.35 !important;
+    margin-top: 1.5rem !important;
+    margin-bottom: 0.75rem !important;
+    color: var(--text-color) !important;
+}
+
+.post-content h5 {
+    font-size: 1.05rem !important;
+    font-weight: 580 !important;
+    line-height: 1.4 !important;
+    margin-top: 1.5rem !important;
+    margin-bottom: 0.75rem !important;
+    color: var(--text-color) !important;
+}
+
+.post-content h6 {
+    font-size: 1rem !important;
+    font-weight: 560 !important;
+    line-height: 1.5 !important;
+    margin-top: 1.5rem !important;
+    margin-bottom: 0.75rem !important;
+    color: var(--text-color) !important;
+}
+
+.post-summary h1, .post-summary h2, .post-summary h3, 
+.post-summary h4, .post-summary h5, .post-summary h6 {
+    margin-top: 1.5rem !important;
+    margin-bottom: 0.75rem !important;
+    color: var(--text-color) !important;
+    font-weight: 600 !important;
+}
+
+/* blockquote 스타일 - CSS 아이솔레이션 우회 */
+.post-content blockquote, .post-summary blockquote {
+    position: relative !important;
+    margin: 2rem 0 !important;
+    padding: 1.5rem 2rem 1.5rem 3rem !important;
+    background: var(--table-header-bg) !important;
+    border: none !important;
+    border-radius: 12px !important;
+    box-shadow: 
+        0 4px 12px rgba(0, 0, 0, 0.05),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+    font-style: italic !important;
+    font-size: 1.05rem !important;
+    line-height: 1.7 !important;
+    color: var(--text-color) !important;
+    backdrop-filter: blur(10px) !important;
+    transition: all 0.3s ease !important;
+    overflow: hidden !important;
+}
+
+.post-content blockquote::before, .post-summary blockquote::before {
+    content: '"' !important;
+    position: absolute !important;
+    top: 0.5rem !important;
+    left: 0.75rem !important;
+    font-size: 3rem !important;
+    font-weight: bold !important;
+    color: var(--sidebar-bg) !important;
+    opacity: 0.3 !important;
+    line-height: 1 !important;
+    font-family: serif !important;
+}
+
+.post-content blockquote::after, .post-summary blockquote::after {
+    content: "" !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    width: 4px !important;
+    background: var(--sidebar-bg) !important;
+    border-radius: 0 2px 2px 0 !important;
+}
+
+.post-content blockquote:hover, .post-summary blockquote:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 
+        0 8px 24px rgba(0, 0, 0, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+}
+
+.post-content blockquote p, .post-summary blockquote p {
+    margin: 0 !important;
+    position: relative !important;
+    z-index: 1 !important;
+}
+
+.post-content blockquote p:last-child, .post-summary blockquote p:last-child {
+    margin-bottom: 0 !important;
+}
+
+/* 다크 테마에서의 blockquote 스타일 */
+body.dark-theme .post-content blockquote, body.dark-theme .post-summary blockquote {
+    background: rgba(255, 255, 255, 0.03) !important;
+    box-shadow: 
+        0 4px 12px rgba(0, 0, 0, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+body.dark-theme .post-content blockquote::before, body.dark-theme .post-summary blockquote::before {
+    color: var(--text-color) !important;
+    opacity: 0.2 !important;
+}
+
+body.dark-theme .post-content blockquote:hover, body.dark-theme .post-summary blockquote:hover {
+    box-shadow: 
+        0 8px 24px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+}
+
+
+
+
+
+

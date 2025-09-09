@@ -1,0 +1,66 @@
+@page "/blog"
+@using SlogEngine.WebAssembly.Models
+@using SlogEngine.WebAssembly.Services
+@inject HttpClient Http
+@inject IMarkdownService MarkdownService
+@inject IJSRuntime JSRuntime
+
+<div class="blog-list-container">
+    <h1 class="page-title">블로그 포스트 목록</h1>
+
+    @if (posts == null)
+    {
+        <p class="loading-message">로딩 중...</p>
+    }
+    else if (!posts.Any())
+    {
+        <p class="empty-message">포스트가 없습니다.</p>
+    }
+    else
+    {
+        @foreach (var post in posts)
+        {
+            <div class="post-card">
+                <h2>@post.Title</h2>
+                <div class="post-summary">@((MarkupString)MarkdownService.ToHtml(post.Summary ?? ""))</div>
+                <p class="post-meta">작성자: @post.Author | 날짜: @post.Date.ToString("yyyy-MM-dd")</p>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    private List<BlogPost>? posts;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            posts = await Http.GetFromJsonAsync<List<BlogPost>>("http://localhost:5024/blog/dimohy");
+        }
+        catch (Exception)
+        {
+            // 에러 처리
+            posts = new List<BlogPost>();
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
+        
+        if (posts != null && posts.Any())
+        {
+            try
+            {
+                // JavaScript에서 enhanceMarkdownContent 함수가 정의되어 있는지 확인
+                await Task.Delay(100); // DOM 업데이트 대기
+                await JSRuntime.InvokeVoidAsync("enhanceMarkdownContent");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"JavaScript 함수 호출 실패: {ex.Message}");
+            }
+        }
+    }
+}

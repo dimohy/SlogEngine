@@ -1,0 +1,84 @@
+/* Counter 페이지 전용 스타일 */
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem;
+    text-align: center;
+}
+
+.mb-8 {
+    margin-bottom: 2rem;
+}
+
+.mb-4 {
+    margin-bottom: 1rem;
+}
+
+.text-lg {
+    font-size: 1.125rem;
+    line-height: 1.75rem;
+}
+
+.font-semibold {
+    font-weight: 600;
+}
+
+/* Counter 특별 스타일 */
+.container h1 {
+    color: var(--text-color);
+    font-size: 2.5rem;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.container p[role="status"] {
+    font-size: 1.25rem;
+    color: var(--text-color);
+    margin-bottom: 2rem;
+    padding: 1rem;
+    background: var(--card-bg);
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    display: inline-block;
+    min-width: 250px;
+}
+
+.container p[role="status"] span {
+    color: #0ea5e9;
+    font-weight: 700;
+    font-size: 1.5rem;
+}
+
+/* 모바일 반응형 스타일 */
+@media (max-width: 768px) {
+    .container {
+        padding: 1rem;
+    }
+    
+    .container h1 {
+        font-size: 2rem;
+    }
+    
+    .container p[role="status"] {
+        font-size: 1.125rem;
+        min-width: 200px;
+    }
+    
+    .container p[role="status"] span {
+        font-size: 1.25rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .container h1 {
+        font-size: 1.75rem;
+    }
+    
+    .container p[role="status"] {
+        font-size: 1rem;
+        min-width: 180px;
+        padding: 0.75rem;
+    }
+}

@@ -1,0 +1,6 @@
+@SlogEngine.Server_HostAddress = http://localhost:5023
+
+GET {{SlogEngine.Server_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

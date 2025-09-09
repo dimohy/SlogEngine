@@ -1,0 +1,70 @@
+﻿@inherits LayoutComponentBase
+@inject IJSRuntime JSRuntime
+<div class="app-layout">
+    <div class="sidebar @SidebarClass">
+        <NavMenu />
+    </div>
+
+    <div class="main-content">
+        <div class="top-bar">
+            <div class="top-bar-left">
+                <button class="hamburger" @onclick="ToggleSidebar" title="Toggle Sidebar">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+                <a href="https://learn.microsoft.com/aspnet/core/" target="_blank" class="custom-btn secondary">About</a>
+            </div>
+            <div class="top-bar-right">
+                <button class="theme-toggle" @onclick="ToggleTheme" title="@ThemeTitle">
+                    @ThemeIcon
+                </button>
+            </div>
+        </div>
+
+        <div class="content">
+            @Body
+        </div>
+    </div>
+</div>
+
+<SlogEngine.WebAssembly.Components.ImageGallery />
+
+@code {
+    private bool IsDarkTheme { get; set; } = false;
+    private bool IsSidebarOpen { get; set; } = false;
+
+    private string ThemeClass => IsDarkTheme ? "dark-theme" : "light-theme";
+    private string ThemeTitle => IsDarkTheme ? "Switch to Light Theme" : "Switch to Dark Theme";
+    private string ThemeIcon => IsDarkTheme ? "☀️" : "🌙";
+    private string SidebarClass => IsSidebarOpen ? "sidebar-open" : "";
+
+    private async Task ToggleTheme()
+    {
+        IsDarkTheme = !IsDarkTheme;
+        await JSRuntime.InvokeVoidAsync("localStorage.setItem", "theme", IsDarkTheme ? "dark" : "light");
+        await JSRuntime.InvokeVoidAsync("setTheme", ThemeClass);
+        StateHasChanged();
+    }
+
+    private void ToggleSidebar()
+    {
+        IsSidebarOpen = !IsSidebarOpen;
+        StateHasChanged();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // 로컬 스토리지에서 테마 설정 불러오기
+            var savedTheme = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "theme");
+            if (savedTheme == "dark")
+            {
+                IsDarkTheme = true;
+                StateHasChanged();
+            }
+            await JSRuntime.InvokeVoidAsync("setTheme", ThemeClass);
+        }
+    }
+}

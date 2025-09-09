@@ -1,0 +1,163 @@
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.JSInterop
+
+<div class="image-gallery-overlay @(_isVisible ? "visible" : "")" @onclick="CloseGallery">
+    <div class="image-gallery-container" @onclick:stopPropagation="true">
+        <button class="close-button" @onclick="CloseGallery">
+            <span>&times;</span>
+        </button>
+        
+        @if (_currentImageIndex > 0)
+        {
+            <button class="nav-button prev-button" @onclick="PreviousImage">
+                <span>&lt;</span>
+            </button>
+        }
+        
+        <div class="image-container">
+            @if (!string.IsNullOrEmpty(_currentImageUrl))
+            {
+                <img src="@_currentImageUrl" alt="@_currentImageAlt" class="gallery-image" />
+            }
+        </div>
+        
+        @if (_currentImageIndex < _images.Count - 1)
+        {
+            <button class="nav-button next-button" @onclick="NextImage">
+                <span>&gt;</span>
+            </button>
+        }
+        
+        @if (_images.Count > 1)
+        {
+            <div class="image-counter">
+                @(_currentImageIndex + 1) / @_images.Count
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private bool _isVisible = false;
+    private int _currentImageIndex = 0;
+    private string _currentImageUrl = string.Empty;
+    private string _currentImageAlt = string.Empty;
+    private List<ImageInfo> _images = new();
+
+    [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // JavaScript에서 이미지 클릭 이벤트를 처리할 수 있도록 DotNet 참조 등록
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("ImageGallery.initialize", DotNetObjectReference.Create(this));
+                Console.WriteLine("ImageGallery initialized successfully");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to initialize ImageGallery: {ex.Message}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// JavaScript에서 호출되는 메서드 - 이미지 갤러리 열기
+    /// </summary>
+    /// <param name="imageUrl">이미지 URL</param>
+    /// <param name="imageAlt">이미지 alt 텍스트</param>
+    /// <param name="allImages">페이지의 모든 이미지 정보</param>
+    [JSInvokable]
+    public async Task OpenGallery(string imageUrl, string imageAlt, ImageInfo[] allImages)
+    {
+        Console.WriteLine($"OpenGallery called with imageUrl: {imageUrl}, allImages count: {allImages?.Length ?? 0}");
+        
+        _images = allImages?.ToList() ?? new List<ImageInfo>();
+        _currentImageIndex = _images.FindIndex(img => img.Src == imageUrl);
+        if (_currentImageIndex == -1) _currentImageIndex = 0;
+        
+        _currentImageUrl = imageUrl;
+        _currentImageAlt = imageAlt;
+        _isVisible = true;
+        
+        Console.WriteLine($"Gallery opened with image index: {_currentImageIndex}");
+        
+        StateHasChanged();
+        
+        // 키보드 이벤트 리스너 추가
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("ImageGallery.addKeyListener");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to add key listener: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// JavaScript에서 호출되는 메서드 - 키보드 이벤트 처리
+    /// </summary>
+    [JSInvokable]
+    public async Task HandleKeyPress(string key)
+    {
+        switch (key)
+        {
+            case "Escape":
+                await CloseGallery();
+                break;
+            case "ArrowLeft":
+                PreviousImage();
+                break;
+            case "ArrowRight":
+                NextImage();
+                break;
+        }
+    }
+
+    private async Task CloseGallery()
+    {
+        _isVisible = false;
+        StateHasChanged();
+        
+        // 키보드 이벤트 리스너 제거
+        await JSRuntime.InvokeVoidAsync("ImageGallery.removeKeyListener");
+    }
+
+    private void PreviousImage()
+    {
+        if (_currentImageIndex > 0)
+        {
+            _currentImageIndex--;
+            UpdateCurrentImage();
+        }
+    }
+
+    private void NextImage()
+    {
+        if (_currentImageIndex < _images.Count - 1)
+        {
+            _currentImageIndex++;
+            UpdateCurrentImage();
+        }
+    }
+
+    private void UpdateCurrentImage()
+    {
+        if (_currentImageIndex >= 0 && _currentImageIndex < _images.Count)
+        {
+            var currentImage = _images[_currentImageIndex];
+            _currentImageUrl = currentImage.Src;
+            _currentImageAlt = currentImage.Alt;
+            StateHasChanged();
+        }
+    }
+
+    public class ImageInfo
+    {
+        public string Src { get; set; } = string.Empty;
+        public string Alt { get; set; } = string.Empty;
+    }
+}

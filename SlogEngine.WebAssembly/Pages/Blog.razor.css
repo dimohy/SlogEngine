@@ -1,0 +1,612 @@
+/* Blog 페이지 전용 스타일 */
+
+.blog-container {
+    background: var(--card-bg);
+    backdrop-filter: blur(10px);
+    padding: 2.5rem;
+    border-radius: 15px;
+    animation: fadeInUp 0.6s ease-out;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+    border: 1.5px solid var(--border-color);
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.loading, .no-posts {
+    text-align: center;
+    color: #718096;
+    font-style: italic;
+    font-size: 1.1rem;
+    padding: 3rem;
+    width: 100%;
+    min-height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.post-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+}
+
+.post-header-left {
+    flex: 1;
+}
+
+.post-header-left .post-title {
+    margin-bottom: 0.5rem;
+}
+
+.post-header-left .post-meta {
+    margin-bottom: 0;
+}
+
+.post {
+    background: var(--card-bg);
+    margin-bottom: 1.5rem;
+    border-radius: 20px;
+    overflow: hidden;
+    transition: all 0.4s ease;
+    animation: slideIn 0.6s ease-out;
+    animation-fill-mode: both;
+    padding: 2.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 
+                0 1px 4px rgba(0, 0, 0, 0.02);
+}
+
+.post:nth-child(odd) {
+    animation-delay: 0.1s;
+}
+
+.post:nth-child(even) {
+    animation-delay: 0.2s;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.post:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12), 
+                0 8px 20px rgba(0, 0, 0, 0.08),
+                0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.post:last-child {
+    margin-bottom: 0;
+}
+
+.post-title {
+    color: var(--text-color);
+    margin-bottom: 1rem;
+    font-size: 1.8rem;
+    font-weight: 700;
+    line-height: 1.2;
+    transition: color 0.3s ease;
+    letter-spacing: -0.02em;
+}
+
+.post:hover .post-title {
+    color: #0ea5e9;
+}
+
+.post-summary {
+    color: var(--text-color);
+    margin-bottom: 1.5rem;
+    font-style: italic;
+    font-size: 1.1rem;
+    line-height: 1.6;
+    opacity: 0.8;
+    background-color: var(--table-header-bg);
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    border-left: 4px solid var(--sidebar-bg);
+}
+
+/* 요약 내부의 마지막 요소 마진 제거 */
+.post-summary > *:last-child {
+    margin-bottom: 0;
+}
+
+.post-meta {
+    color: var(--text-color);
+    font-size: 0.9rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    opacity: 0.7;
+}
+
+.post-meta .author,
+.post-meta .date {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.post-meta::before {
+    content: '';
+}
+
+.post-content {
+    line-height: 1.8;
+    color: var(--text-color);
+    font-size: 1.1rem;
+    letter-spacing: 0.01em;
+}
+
+.post-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-start;
+    flex-shrink: 0;
+}
+
+/* 마크다운 콘텐츠 스타일링 */
+.post-summary, .post-content {
+    line-height: 1.6;
+}
+
+.post-summary p, .post-content p {
+    margin-bottom: 1rem;
+}
+
+.post-summary h1, .post-content h1,
+.post-summary h2, .post-content h2,
+.post-summary h3, .post-content h3,
+.post-summary h4, .post-content h4,
+.post-summary h5, .post-content h5,
+.post-summary h6, .post-content h6 {
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+/* 포스트 내용의 제목 크기를 post-title(1.8rem)보다 작게 조정 - 강력한 선택자 사용 */
+.post-summary h1, .post-content h1,
+.post-summary[b-2gtjeucyz1] h1, .post-content[b-2gtjeucyz1] h1 {
+    font-size: 1.7rem !important;
+    font-weight: 700 !important;
+    line-height: 1.2 !important;
+}
+
+.post-summary h2, .post-content h2,
+.post-summary[b-2gtjeucyz1] h2, .post-content[b-2gtjeucyz1] h2 {
+    font-size: 1.5rem !important;
+    font-weight: 650 !important;
+    line-height: 1.25 !important;
+}
+
+.post-summary h3, .post-content h3,
+.post-summary[b-2gtjeucyz1] h3, .post-content[b-2gtjeucyz1] h3 {
+    font-size: 1.3rem !important;
+    font-weight: 620 !important;
+    line-height: 1.3 !important;
+}
+
+.post-summary h4, .post-content h4,
+.post-summary[b-2gtjeucyz1] h4, .post-content[b-2gtjeucyz1] h4 {
+    font-size: 1.15rem !important;
+    font-weight: 600 !important;
+    line-height: 1.35 !important;
+}
+
+.post-summary h5, .post-content h5,
+.post-summary[b-2gtjeucyz1] h5, .post-content[b-2gtjeucyz1] h5 {
+    font-size: 1.05rem !important;
+    font-weight: 580 !important;
+    line-height: 1.4 !important;
+}
+
+.post-summary h6, .post-content h6,
+.post-summary[b-2gtjeucyz1] h6, .post-content[b-2gtjeucyz1] h6 {
+    font-size: 1rem !important;
+    font-weight: 560 !important;
+    line-height: 1.5 !important;
+}
+
+.post-summary ul, .post-content ul,
+.post-summary ol, .post-content ol {
+    margin-bottom: 1rem;
+    padding-left: 2rem;
+}
+
+.post-summary li, .post-content li {
+    margin-bottom: 0.5rem;
+}
+
+.post-summary blockquote, .post-content blockquote {
+    position: relative;
+    margin: 2rem 0;
+    padding: 1.5rem 2rem 1.5rem 3rem;
+    background: var(--table-header-bg);
+    border: none;
+    border-radius: 12px;
+    box-shadow: 
+        0 4px 12px rgba(0, 0, 0, 0.05),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    font-style: italic;
+    font-size: 1.05rem;
+    line-height: 1.7;
+    color: var(--text-color);
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+
+.post-summary blockquote::before, .post-content blockquote::before {
+    content: '"';
+    position: absolute;
+    top: 0.5rem;
+    left: 0.75rem;
+    font-size: 3rem;
+    font-weight: bold;
+    color: var(--sidebar-bg);
+    opacity: 0.3;
+    line-height: 1;
+    font-family: serif;
+}
+
+.post-summary blockquote::after, .post-content blockquote::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: var(--sidebar-bg);
+    border-radius: 0 2px 2px 0;
+}
+
+.post-summary blockquote:hover, .post-content blockquote:hover {
+    transform: translateY(-2px);
+    box-shadow: 
+        0 8px 24px rgba(0, 0, 0, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.post-summary blockquote p, .post-content blockquote p {
+    margin: 0;
+    position: relative;
+    z-index: 1;
+}
+
+.post-summary blockquote p:last-child, .post-content blockquote p:last-child {
+    margin-bottom: 0;
+}
+
+/* 인라인 코드 스타일은 app.css로 이동됨 */
+
+/* 테이블 관련 스타일은 app.css로 이동됨 */
+/* 링크 관련 스타일은 app.css로 이동됨 */
+
+/* 코드 블록 스타일 커스터마이징 */
+/* 기존 코드 관련 스타일은 app.css로 이동됨 */
+
+/* 다크 테마에서의 코드 블록 헤더 */
+body.dark-theme .code-language-label {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border-color: rgba(255, 255, 255, 0.15) !important;
+    color: #f8fafc !important;
+}
+
+body.dark-theme .code-language-label:hover {
+    background: rgba(255, 255, 255, 0.2) !important;
+}
+
+body.dark-theme .code-copy-button {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border-color: rgba(255, 255, 255, 0.15) !important;
+    color: #f8fafc !important;
+}
+
+body.dark-theme .code-copy-button:hover {
+    background: rgba(255, 255, 255, 0.2) !important;
+}
+
+/* 수평 스크롤 스타일 개선 */
+.post-summary pre, .post-content pre {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-color) transparent;
+}
+
+.post-summary pre::-webkit-scrollbar, .post-content pre::-webkit-scrollbar {
+    height: 6px;
+}
+
+.post-summary pre::-webkit-scrollbar-track, .post-content pre::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.post-summary pre::-webkit-scrollbar-thumb, .post-content pre::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 3px;
+}
+
+.post-summary pre::-webkit-scrollbar-thumb:hover, .post-content pre::-webkit-scrollbar-thumb:hover {
+    background: var(--text-muted);
+}
+
+/* Prism.js 커스텀 스타일 */
+.post-summary pre[class*="language-"], .post-content pre[class*="language-"] {
+    background: var(--pre-bg) !important;
+    margin: 1.5rem 0 !important;
+    border: 1px solid var(--pre-border) !important;
+    border-radius: 8px !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Prism.js 코드 블록이 CSS 변수를 사용하도록 수정 */
+.post-summary pre[class*="language-"], .post-content pre[class*="language-"] {
+    background: var(--pre-bg) !important;
+    border-color: var(--pre-border) !important;
+    color: var(--pre-text) !important;
+}
+
+.post-summary code[class*="language-"], .post-content code[class*="language-"] {
+    background: transparent !important;
+    color: var(--pre-text) !important;
+    text-shadow: none !important;
+    font-family: 'Fira Code', 'JetBrains Mono', 'Cascadia Code', 'Source Code Pro', 'Courier New', monospace !important;
+}
+
+/* Prism.js 토큰 색상 커스터마이징 - 라이트 테마 */
+.post-summary .token.comment, .post-content .token.comment,
+.post-summary .token.prolog, .post-content .token.prolog,
+.post-summary .token.doctype, .post-content .token.doctype,
+.post-summary .token.cdata, .post-content .token.cdata {
+    color: #6b7280 !important;
+    font-style: italic;
+}
+
+.post-summary .token.punctuation, .post-content .token.punctuation {
+    color: #4b5563 !important; /* 라이트 테마에서 더 진한 색 */
+}
+
+.post-summary .token.property, .post-content .token.property,
+.post-summary .token.tag, .post-content .token.tag,
+.post-summary .token.constant, .post-content .token.constant,
+.post-summary .token.symbol, .post-content .token.symbol,
+.post-summary .token.deleted, .post-content .token.deleted {
+    color: #dc2626 !important;
+}
+
+.post-summary .token.boolean, .post-content .token.boolean,
+.post-summary .token.number, .post-content .token.number {
+    color: #059669 !important;
+}
+
+.post-summary .token.selector, .post-content .token.selector,
+.post-summary .token.attr-name, .post-content .token.attr-name,
+.post-summary .token.string, .post-content .token.string,
+.post-summary .token.char, .post-content .token.char,
+.post-summary .token.builtin, .post-content .token.builtin,
+.post-summary .token.inserted, .post-content .token.inserted {
+    color: #0891b2 !important;
+}
+
+.post-summary .token.operator, .post-content .token.operator,
+.post-summary .token.entity, .post-content .token.entity,
+.post-summary .token.url, .post-content .token.url,
+.post-summary .token.variable, .post-content .token.variable {
+    color: #7c3aed !important;
+}
+
+.post-summary .token.atrule, .post-content .token.atrule,
+.post-summary .token.attr-value, .post-content .token.attr-value,
+.post-summary .token.function, .post-content .token.function,
+.post-summary .token.class-name, .post-content .token.class-name {
+    color: #dc2626 !important;
+}
+
+.post-summary .token.keyword, .post-content .token.keyword {
+    color: #7c2d12 !important; /* 라이트 테마에서 더 진한 브라운 */
+}
+
+.post-summary .token.regex, .post-content .token.regex,
+.post-summary .token.important, .post-content .token.important {
+    color: #be185d !important;
+}
+/* 다크 테마에서의 Prism.js 토큰 색상 - 더 밝고 선명하게 */
+body.dark-theme .post-summary .token.comment, body.dark-theme .post-content .token.comment,
+body.dark-theme .post-summary .token.prolog, body.dark-theme .post-content .token.prolog,
+body.dark-theme .post-summary .token.doctype, body.dark-theme .post-content .token.doctype,
+body.dark-theme .post-summary .token.cdata, body.dark-theme .post-content .token.cdata {
+    color: #94a3b8 !important; /* 더 밝은 회색 */
+    font-style: italic;
+}
+
+body.dark-theme .post-summary .token.punctuation, body.dark-theme .post-content .token.punctuation {
+    color: #e2e8f0 !important; /* 더 밝은 회색 */
+}
+
+body.dark-theme .post-summary .token.property, body.dark-theme .post-content .token.property,
+body.dark-theme .post-summary .token.tag, body.dark-theme .post-content .token.tag,
+body.dark-theme .post-summary .token.constant, body.dark-theme .post-content .token.constant,
+body.dark-theme .post-summary .token.symbol, body.dark-theme .post-content .token.symbol,
+body.dark-theme .post-summary .token.deleted, body.dark-theme .post-content .token.deleted {
+    color: #ff6b6b !important; /* 더 밝은 빨간색 */
+}
+
+body.dark-theme .post-summary .token.boolean, body.dark-theme .post-content .token.boolean,
+body.dark-theme .post-summary .token.number, body.dark-theme .post-content .token.number {
+    color: #51cf66 !important; /* 더 밝은 초록색 */
+}
+
+body.dark-theme .post-summary .token.selector, body.dark-theme .post-content .token.selector,
+body.dark-theme .post-summary .token.attr-name, body.dark-theme .post-content .token.attr-name,
+body.dark-theme .post-summary .token.string, body.dark-theme .post-content .token.string,
+body.dark-theme .post-summary .token.char, body.dark-theme .post-content .token.char,
+body.dark-theme .post-summary .token.builtin, body.dark-theme .post-content .token.builtin,
+body.dark-theme .post-summary .token.inserted, body.dark-theme .post-content .token.inserted {
+    color: #74c0fc !important; /* 더 밝은 파란색 */
+}
+
+body.dark-theme .post-summary .token.operator, body.dark-theme .post-content .token.operator,
+body.dark-theme .post-summary .token.entity, body.dark-theme .post-content .token.entity,
+body.dark-theme .post-summary .token.url, body.dark-theme .post-content .token.url,
+body.dark-theme .post-summary .token.variable, body.dark-theme .post-content .token.variable {
+    color: #da77f2 !important; /* 더 밝은 보라색 */
+}
+
+body.dark-theme .post-summary .token.atrule, body.dark-theme .post-content .token.atrule,
+body.dark-theme .post-summary .token.attr-value, body.dark-theme .post-content .token.attr-value,
+body.dark-theme .post-summary .token.function, body.dark-theme .post-content .token.function,
+body.dark-theme .post-summary .token.class-name, body.dark-theme .post-content .token.class-name {
+    color: #ffa94d !important; /* 더 밝은 오렌지색 */
+}
+
+body.dark-theme .post-summary .token.keyword, body.dark-theme .post-content .token.keyword {
+    color: #ffd43b !important; /* 더 밝은 노란색 */
+    font-weight: 600;
+}
+
+body.dark-theme .post-summary .token.regex, body.dark-theme .post-content .token.regex,
+body.dark-theme .post-summary .token.important, body.dark-theme .post-content .token.important {
+    color: #ff8cc8 !important; /* 더 밝은 핑크색 */
+    font-weight: 600;
+}
+
+.post-summary .token.keyword, .post-content .token.keyword {
+    color: #7c2d12 !important;
+    font-weight: 600;
+}
+
+.post-summary .token.regex, .post-content .token.regex,
+.post-summary .token.important, .post-content .token.important,
+.post-summary .token.variable, .post-content .token.variable {
+    color: #be185d !important;
+}
+
+/* 다크 테마에서의 Prism.js 토큰 색상 */
+body.dark-theme .post-summary .token.comment, body.dark-theme .post-content .token.comment,
+body.dark-theme .post-summary .token.prolog, body.dark-theme .post-content .token.prolog,
+body.dark-theme .post-summary .token.doctype, body.dark-theme .post-content .token.doctype,
+body.dark-theme .post-summary .token.cdata, body.dark-theme .post-content .token.cdata {
+    color: #64748b !important;
+    font-style: italic;
+}
+
+body.dark-theme .post-summary .token.property, body.dark-theme .post-content .token.property,
+body.dark-theme .post-summary .token.tag, body.dark-theme .post-content .token.tag,
+body.dark-theme .post-summary .token.constant, body.dark-theme .post-content .token.constant,
+body.dark-theme .post-summary .token.symbol, body.dark-theme .post-content .token.symbol,
+body.dark-theme .post-summary .token.deleted, body.dark-theme .post-content .token.deleted {
+    color: #f87171 !important;
+}
+
+body.dark-theme .post-summary .token.boolean, body.dark-theme .post-content .token.boolean,
+body.dark-theme .post-summary .token.number, body.dark-theme .post-content .token.number {
+    color: #34d399 !important;
+}
+
+body.dark-theme .post-summary .token.selector, body.dark-theme .post-content .token.selector,
+body.dark-theme .post-summary .token.attr-name, body.dark-theme .post-content .token.attr-name,
+body.dark-theme .post-summary .token.string, body.dark-theme .post-content .token.string,
+body.dark-theme .post-summary .token.char, body.dark-theme .post-content .token.char,
+body.dark-theme .post-summary .token.builtin, body.dark-theme .post-content .token.builtin,
+body.dark-theme .post-summary .token.inserted, body.dark-theme .post-content .token.inserted {
+    color: #60a5fa !important;
+}
+
+body.dark-theme .post-summary .token.operator, body.dark-theme .post-content .token.operator,
+body.dark-theme .post-summary .token.entity, body.dark-theme .post-content .token.entity,
+body.dark-theme .post-summary .token.url, body.dark-theme .post-content .token.url,
+body.dark-theme .post-summary .language-css .token.string, body.dark-theme .post-content .language-css .token.string,
+body.dark-theme .post-summary .style .token.string, body.dark-theme .post-content .style .token.string {
+    color: #a78bfa !important;
+}
+
+body.dark-theme .post-summary .token.atrule, body.dark-theme .post-content .token.atrule,
+body.dark-theme .post-summary .token.attr-value, body.dark-theme .post-content .token.attr-value,
+body.dark-theme .post-summary .token.function, body.dark-theme .post-content .token.function,
+body.dark-theme .post-summary .token.class-name, body.dark-theme .post-content .token.class-name {
+    color: #fb923c !important;
+}
+
+body.dark-theme .post-summary .token.keyword, body.dark-theme .post-content .token.keyword {
+    color: #fbbf24 !important;
+    font-weight: 600;
+}
+
+body.dark-theme .post-summary .token.regex, body.dark-theme .post-content .token.regex,
+body.dark-theme .post-summary .token.important, body.dark-theme .post-content .token.important,
+body.dark-theme .post-summary .token.variable, body.dark-theme .post-content .token.variable {
+    color: #f472b6 !important;
+}
+
+body.dark-theme .post-summary .token.punctuation, body.dark-theme .post-content .token.punctuation {
+    color: #94a3b8 !important;
+}
+
+/* 갤러리 이미지 스타일 */
+.post-content img.gallery-image.clickable {
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 1rem auto;
+}
+
+.post-content img.gallery-image.clickable:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    filter: brightness(1.05);
+}
+
+.post-summary img.gallery-image.clickable {
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-radius: 6px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+    max-width: 100%;
+    height: auto;
+}
+
+.post-summary img.gallery-image.clickable:hover {
+    transform: scale(1.01);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+/* 다크 테마에서의 갤러리 이미지 스타일 */
+body.dark-theme .post-content img.gallery-image.clickable {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-theme .post-content img.gallery-image.clickable:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    filter: brightness(1.1);
+}
+
+body.dark-theme .post-summary img.gallery-image.clickable {
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+body.dark-theme .post-summary img.gallery-image.clickable:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}

@@ -1,0 +1,40 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Launch Server",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build-server",
+            "program": "${workspaceFolder}/SlogEngine.Server/bin/Debug/net10.0/SlogEngine.Server.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/SlogEngine.Server",
+            "console": "internalConsole",
+            "stopAtEntry": false,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            }
+        },
+        {
+            "name": "Launch WebAssembly",
+            "type": "blazorwasm",
+            "request": "launch",
+            "preLaunchTask": "build-webassembly",
+            "cwd": "${workspaceFolder}/SlogEngine.WebAssembly",
+            "url": "https://localhost:7050",
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            }
+        }
+    ],
+    "compounds": [
+        {
+            "name": "Launch Both",
+            "configurations": ["Launch Server", "Launch WebAssembly"],
+            "presentation": {
+                "group": "both",
+                "order": 1
+            }
+        }
+    ]
+}
