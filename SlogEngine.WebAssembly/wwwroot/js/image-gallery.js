@@ -25,9 +25,13 @@ window.ImageGallery = (function() {
     function setupImageClickHandlers() {
         console.log('Setting up image click handlers');
         
-        // 모든 이미지를 찾아서 클릭 이벤트 추가
-        const allImages = document.querySelectorAll('img');
-        console.log(`Found ${allImages.length} images on page`);
+        // 블로그 포스트 내용에서만 이미지를 찾아서 클릭 이벤트 추가
+        const postContent = document.querySelector('.post-content, .post-detail, .blog-post-container, article');
+        const allImages = postContent ? 
+            postContent.querySelectorAll('img') : 
+            document.querySelectorAll('img');
+        
+        console.log(`Found ${allImages.length} images in post content`);
         
         allImages.forEach((img, index) => {
             console.log(`Processing image ${index + 1}: ${img.src}`);
@@ -64,7 +68,14 @@ window.ImageGallery = (function() {
         e.stopPropagation();
         
         const clickedImage = e.target;
-        const allImages = document.querySelectorAll('img');
+        
+        // 블로그 포스트 내용에서만 이미지를 검색
+        const postContent = document.querySelector('.post-content, .post-detail, .blog-post-container, article');
+        const allImages = postContent ? 
+            postContent.querySelectorAll('img') : 
+            document.querySelectorAll('img');
+        
+        console.log(`Found ${allImages.length} images in post content`);
         
         openImageGallery(clickedImage, allImages);
     }

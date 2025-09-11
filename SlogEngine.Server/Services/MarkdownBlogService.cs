@@ -1,19 +1,32 @@
 using SlogEngine.Server.Interfaces;
 using SlogEngine.Server.Models;
-using System.Text.Json;
+using System.Text;
 using System.Text.RegularExpressions;
+using YamlDotNet.Serialization;
 
 namespace SlogEngine.Server.Services;
 
-public class BlogService : IBlogService
+/// <summary>
+/// Markdown 형식으로 블로그 포스트를 저장하고 읽는 서비스입니다.
+/// </summary>
+public class MarkdownBlogService : IBlogService
 {
     private readonly string _blogsPath;
+    private readonly IDeserializer _yamlDeserializer;
+    private readonly ISerializer _yamlSerializer;
 
-    public BlogService(IWebHostEnvironment env)
+    public MarkdownBlogService(IWebHostEnvironment env)
     {
         _blogsPath = Path.Combine(env.WebRootPath, "blogs");
+        _yamlDeserializer = new DeserializerBuilder().Build();
+        _yamlSerializer = new SerializerBuilder().Build();
     }
 
+    /// <summary>
+    /// 사용자의 모든 블로그 포스트를 조회합니다.
+    /// </summary>
+    /// <param name="username">사용자명</param>
+    /// <returns>블로그 포스트 목록</returns>
     public IReadOnlyList<BlogPost> GetPosts(string username)
     {
         var userPath = Path.Combine(_blogsPath, username);
@@ -25,12 +38,11 @@ public class BlogService : IBlogService
         }
 
         var posts = new List<BlogPost>();
-        foreach (var file in Directory.GetFiles(postsPath, "*.json"))
+        foreach (var file in Directory.GetFiles(postsPath, "*.md"))
         {
             try
             {
-                var json = File.ReadAllText(file);
-                var post = JsonSerializer.Deserialize<BlogPost>(json);
+                var post = ReadMarkdownPost(file);
                 if (post != null)
                 {
                     posts.Add(post);
@@ -68,12 +80,11 @@ public class BlogService : IBlogService
         }
 
         var posts = new List<BlogPost>();
-        foreach (var file in Directory.GetFiles(postsPath, "*.json"))
+        foreach (var file in Directory.GetFiles(postsPath, "*.md"))
         {
             try
             {
-                var json = File.ReadAllText(file);
-                var post = JsonSerializer.Deserialize<BlogPost>(json);
+                var post = ReadMarkdownPost(file);
                 if (post != null)
                 {
                     posts.Add(post);
@@ -126,11 +137,17 @@ public class BlogService : IBlogService
         };
     }
 
+    /// <summary>
+    /// 특정 블로그 포스트를 조회합니다.
+    /// </summary>
+    /// <param name="username">사용자명</param>
+    /// <param name="postId">포스트 ID</param>
+    /// <returns>블로그 포스트</returns>
     public BlogPost? GetPost(string username, string postId)
     {
         var userPath = Path.Combine(_blogsPath, username);
         var postsPath = Path.Combine(userPath, "posts");
-        var postFile = Path.Combine(postsPath, $"{postId}.json");
+        var postFile = Path.Combine(postsPath, $"{postId}.md");
 
         if (!File.Exists(postFile))
         {
@@ -139,8 +156,7 @@ public class BlogService : IBlogService
 
         try
         {
-            var json = File.ReadAllText(postFile);
-            return JsonSerializer.Deserialize<BlogPost>(json);
+            return ReadMarkdownPost(postFile);
         }
         catch
         {
@@ -148,6 +164,11 @@ public class BlogService : IBlogService
         }
     }
 
+    /// <summary>
+    /// 새 블로그 포스트를 추가합니다.
+    /// </summary>
+    /// <param name="username">사용자명</param>
+    /// <param name="post">블로그 포스트</param>
     public void AddPost(string username, BlogPost post)
     {
         var userPath = Path.Combine(_blogsPath, username);
@@ -160,16 +181,20 @@ public class BlogService : IBlogService
         // 이미지 처리 및 콘텐츠 업데이트
         post.Content = ProcessImagesForPost(username, post.Id, post.Content ?? string.Empty);
 
-        var postFile = Path.Combine(postsPath, $"{post.Id}.json");
-        var json = JsonSerializer.Serialize(post, new JsonSerializerOptions { WriteIndented = true });
-        File.WriteAllText(postFile, json);
+        var postFile = Path.Combine(postsPath, $"{post.Id}.md");
+        WriteMarkdownPost(postFile, post);
     }
 
+    /// <summary>
+    /// 기존 블로그 포스트를 수정합니다.
+    /// </summary>
+    /// <param name="username">사용자명</param>
+    /// <param name="post">블로그 포스트</param>
     public void UpdatePost(string username, BlogPost post)
     {
         var userPath = Path.Combine(_blogsPath, username);
         var postsPath = Path.Combine(userPath, "posts");
-        var postFile = Path.Combine(postsPath, $"{post.Id}.json");
+        var postFile = Path.Combine(postsPath, $"{post.Id}.md");
 
         if (!File.Exists(postFile))
         {
@@ -181,19 +206,23 @@ public class BlogService : IBlogService
         // 이미지 처리 및 콘텐츠 업데이트
         post.Content = ProcessImagesForPost(username, post.Id, post.Content ?? string.Empty);
 
-        var json = JsonSerializer.Serialize(post, new JsonSerializerOptions { WriteIndented = true });
-        File.WriteAllText(postFile, json);
+        WriteMarkdownPost(postFile, post);
     }
 
+    /// <summary>
+    /// 블로그 포스트를 삭제합니다.
+    /// </summary>
+    /// <param name="username">사용자명</param>
+    /// <param name="postId">포스트 ID</param>
     public void DeletePost(string username, string postId)
     {
         var userPath = Path.Combine(_blogsPath, username);
         var postsPath = Path.Combine(userPath, "posts");
-        var postFile = Path.Combine(postsPath, $"{postId}.json");
+        var postFile = Path.Combine(postsPath, $"{postId}.md");
 
         if (File.Exists(postFile))
         {
-            // JSON 파일 삭제
+            // Markdown 파일 삭제
             File.Delete(postFile);
             
             // 포스트 관련 이미지 디렉토리 삭제
@@ -205,6 +234,11 @@ public class BlogService : IBlogService
         }
     }
 
+    /// <summary>
+    /// 블로그 메타데이터를 조회합니다.
+    /// </summary>
+    /// <param name="username">사용자명</param>
+    /// <returns>블로그 메타데이터</returns>
     public BlogMeta GetBlogMeta(string username)
     {
         var userPath = Path.Combine(_blogsPath, username);
@@ -221,7 +255,7 @@ public class BlogService : IBlogService
         try
         {
             var json = File.ReadAllText(metaFile);
-            var meta = JsonSerializer.Deserialize<BlogMeta>(json);
+            var meta = System.Text.Json.JsonSerializer.Deserialize<BlogMeta>(json);
             if (meta != null)
             {
                 // 타이틀이 비어있으면 기본값 설정
@@ -240,17 +274,27 @@ public class BlogService : IBlogService
         return new BlogMeta { Title = $"{username} 블로그" };
     }
 
+    /// <summary>
+    /// 블로그 메타데이터를 업데이트합니다.
+    /// </summary>
+    /// <param name="username">사용자명</param>
+    /// <param name="meta">블로그 메타데이터</param>
     public void UpdateBlogMeta(string username, BlogMeta meta)
     {
         var userPath = Path.Combine(_blogsPath, username);
         Directory.CreateDirectory(userPath);
         var metaFile = Path.Combine(userPath, "meta.json");
 
-        var json = JsonSerializer.Serialize(meta, new JsonSerializerOptions { WriteIndented = true });
+        var json = System.Text.Json.JsonSerializer.Serialize(meta, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
         File.WriteAllText(metaFile, json);
     }
 
-    // 임시 이미지 저장 (클립보드 붙여넣기 시)
+    /// <summary>
+    /// 임시 이미지를 저장합니다.
+    /// </summary>
+    /// <param name="username">사용자명</param>
+    /// <param name="imageFile">이미지 파일</param>
+    /// <returns>임시 이미지 URL</returns>
     public async Task<string> SaveTempImageAsync(string username, IFormFile imageFile)
     {
         Console.WriteLine($"SaveTempImageAsync 시작: username={username}, 파일명={imageFile.FileName}");
@@ -278,7 +322,122 @@ public class BlogService : IBlogService
         return webPath;
     }
 
-    // 포스트 저장 시 이미지 정리 및 이동
+    /// <summary>
+    /// Markdown 파일에서 블로그 포스트를 읽습니다.
+    /// </summary>
+    /// <param name="filePath">파일 경로</param>
+    /// <returns>블로그 포스트</returns>
+    private BlogPost? ReadMarkdownPost(string filePath)
+    {
+        var content = File.ReadAllText(filePath, Encoding.UTF8);
+        
+        // YAML Front Matter 추출
+        var frontMatterMatch = Regex.Match(content, @"^---\s*\n(.*?)\n---\s*\n(.*)", RegexOptions.Singleline);
+        
+        if (!frontMatterMatch.Success)
+        {
+            return null;
+        }
+
+        var frontMatter = frontMatterMatch.Groups[1].Value;
+        var markdownContent = frontMatterMatch.Groups[2].Value;
+
+        try
+        {
+            var metadata = _yamlDeserializer.Deserialize<Dictionary<string, object>>(frontMatter);
+            var fileName = Path.GetFileNameWithoutExtension(filePath);
+
+            var post = new BlogPost
+            {
+                Id = fileName,
+                Title = GetStringValue(metadata, "title"),
+                Content = markdownContent,
+                Summary = GetStringValue(metadata, "summary"),
+                Author = GetStringValue(metadata, "author"),
+                OriginalId = GetStringValue(metadata, "originalId"),
+                Slug = GetStringValue(metadata, "slug"),
+                Cover = GetStringValue(metadata, "cover"),
+                Tags = GetStringValue(metadata, "tags"),
+                Date = GetDateTimeValue(metadata, "date") ?? DateTime.MinValue,
+                DatePublished = GetDateTimeValue(metadata, "datePublished")
+            };
+
+            return post;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// 블로그 포스트를 Markdown 파일에 씁니다.
+    /// </summary>
+    /// <param name="filePath">파일 경로</param>
+    /// <param name="post">블로그 포스트</param>
+    private void WriteMarkdownPost(string filePath, BlogPost post)
+    {
+        var metadata = new Dictionary<string, object>
+        {
+            ["title"] = post.Title ?? string.Empty,
+            ["date"] = post.Date.ToString("yyyy-MM-ddTHH:mm:ssK"),
+            ["summary"] = post.Summary ?? string.Empty,
+            ["author"] = post.Author ?? string.Empty,
+            ["originalId"] = post.OriginalId ?? string.Empty,
+            ["slug"] = post.Slug ?? string.Empty,
+            ["cover"] = post.Cover ?? string.Empty,
+            ["tags"] = post.Tags ?? string.Empty
+        };
+
+        if (post.DatePublished.HasValue)
+        {
+            metadata["datePublished"] = post.DatePublished.Value.ToString("yyyy-MM-ddTHH:mm:ssK");
+        }
+
+        var frontMatter = _yamlSerializer.Serialize(metadata);
+        var content = $"---\n{frontMatter}---\n{post.Content ?? string.Empty}";
+
+        File.WriteAllText(filePath, content, Encoding.UTF8);
+    }
+
+    /// <summary>
+    /// 딕셔너리에서 문자열 값을 안전하게 추출합니다.
+    /// </summary>
+    /// <param name="dict">딕셔너리</param>
+    /// <param name="key">키</param>
+    /// <returns>문자열 값</returns>
+    private static string? GetStringValue(IReadOnlyDictionary<string, object> dict, string key)
+    {
+        return dict.TryGetValue(key, out var value) ? value?.ToString() : null;
+    }
+
+    /// <summary>
+    /// 딕셔너리에서 DateTime 값을 안전하게 추출합니다.
+    /// </summary>
+    /// <param name="dict">딕셔너리</param>
+    /// <param name="key">키</param>
+    /// <returns>DateTime 값</returns>
+    private static DateTime? GetDateTimeValue(IReadOnlyDictionary<string, object> dict, string key)
+    {
+        if (!dict.TryGetValue(key, out var value))
+            return null;
+
+        if (value is DateTime dateTime)
+            return dateTime;
+
+        if (DateTime.TryParse(value?.ToString(), out var parsedDate))
+            return parsedDate;
+
+        return null;
+    }
+
+    /// <summary>
+    /// 포스트 저장 시 이미지를 처리하고 이동합니다.
+    /// </summary>
+    /// <param name="username">사용자명</param>
+    /// <param name="postId">포스트 ID</param>
+    /// <param name="content">포스트 내용</param>
+    /// <returns>처리된 포스트 내용</returns>
     private string ProcessImagesForPost(string username, string postId, string content)
     {
         Console.WriteLine($"ProcessImagesForPost 시작: postId={postId}");
@@ -374,7 +533,11 @@ public class BlogService : IBlogService
         return content;
     }
 
-    // 콘텐츠에서 이미지 URL 추출
+    /// <summary>
+    /// 콘텐츠에서 이미지 URL을 추출합니다.
+    /// </summary>
+    /// <param name="content">콘텐츠</param>
+    /// <returns>이미지 URL 목록</returns>
     private static IReadOnlyList<string> ExtractImageUrls(string content)
     {
         if (string.IsNullOrEmpty(content))
@@ -402,7 +565,10 @@ public class BlogService : IBlogService
         return urls.Where(url => url.StartsWith("/blogs/")).ToList();
     }
 
-    // 오래된 임시 이미지 정리
+    /// <summary>
+    /// 오래된 임시 이미지를 정리합니다.
+    /// </summary>
+    /// <param name="username">사용자명</param>
     private void CleanupOldTempImages(string username)
     {
         var userPath = Path.Combine(_blogsPath, username);

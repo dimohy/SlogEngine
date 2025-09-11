@@ -57,7 +57,7 @@ window.clipboardHelper = {
                                 console.log('Calling Blazor method with filename:', fileName, 'Base64 length:', base64String.length);
                                 
                                 // Blazor 메서드 호출 (Base64 문자열로)
-                                dotNetHelper.invokeMethodAsync('OnImagePasted', base64String, fileName, file.type)
+                                dotNetHelper.invokeMethodAsync('OnImagePasted', elementId, base64String, fileName, file.type)
                                     .then(() => {
                                         console.log('Successfully called OnImagePasted');
                                     })
@@ -123,6 +123,29 @@ window.clipboardHelper = {
             console.log('Text inserted at cursor position:', startPos);
         } else {
             console.error('Element not found for text insertion:', elementId);
+        }
+    },
+    
+    // 텍스트 에리어에서 특정 텍스트를 다른 텍스트로 교체
+    replaceText: function(elementId, oldText, newText) {
+        const element = document.getElementById(elementId);
+        if (element) {
+            const currentValue = element.value;
+            const newValue = currentValue.replace(oldText, newText);
+            
+            if (currentValue !== newValue) {
+                element.value = newValue;
+                
+                // 변경 이벤트 발생 (Blazor 바인딩을 위해)
+                element.dispatchEvent(new Event('input', { bubbles: true }));
+                element.dispatchEvent(new Event('change', { bubbles: true }));
+                
+                console.log('Text replaced successfully:', oldText, '->', newText);
+            } else {
+                console.log('No text replacement occurred for:', oldText);
+            }
+        } else {
+            console.error('Element not found for text replacement:', elementId);
         }
     }
 };

@@ -1,55 +1,373 @@
 @page "/blog"
 @using SlogEngine.WebAssembly.Models
 @using SlogEngine.WebAssembly.Services
-@inject HttpClient Http
+@using SlogEngine.WebAssembly.Components
+@inject BlogApiService BlogApiService
 @inject IMarkdownService MarkdownService
 @inject IJSRuntime JSRuntime
 
 <div class="blog-list-container">
     <h1 class="page-title">블로그 포스트 목록</h1>
 
-    @if (posts == null)
+    <!-- 검색 및 필터 섹션 -->
+    <div class="search-filter-section mb-4">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="input-group">
+                    <input type="text" class="form-control" placeholder="검색어를 입력하세요..." 
+                           @bind="searchQuery" @bind:event="oninput" @onkeydown="@(async (e) => { if (e.Key == "Enter") await SearchPosts(); })">
+                    <button class="btn btn-outline-secondary" type="button" @onclick="SearchPosts">
+                        <i class="fas fa-search"></i> 검색
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <input type="text" class="form-control" placeholder="태그 필터..." 
+                       @bind="tagFilter" @bind:event="oninput" @onkeydown="@(async (e) => { if (e.Key == "Enter") await SearchPosts(); })">
+            </div>
+            <div class="col-md-2">
+                <select class="form-select" @onchange="OnPageSizeChanged">
+                    <option value="5">5개씩</option>
+                    <option value="10" selected>10개씩</option>
+                    <option value="20">20개씩</option>
+                    <option value="50">50개씩</option>
+                </select>
+            </div>
+        </div>
+        @if (!string.IsNullOrEmpty(searchQuery) || !string.IsNullOrEmpty(tagFilter))
+        {
+            <div class="mt-2">
+                <button class="btn btn-sm btn-outline-secondary" @onclick="ClearFilters">
+                    <i class="fas fa-times"></i> 필터 초기화
+                </button>
+            </div>
+        }
+    </div>
+
+    @if (isLoading)
     {
-        <p class="loading-message">로딩 중...</p>
+        <div class="loading-container">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">로딩 중...</span>
+            </div>
+            <p class="loading-message">포스트를 불러오는 중...</p>
+        </div>
     }
-    else if (!posts.Any())
+    else if (pagedResult?.Items == null || !pagedResult.Items.Any())
     {
-        <p class="empty-message">포스트가 없습니다.</p>
+        <div class="empty-container">
+            <i class="fas fa-file-alt empty-icon"></i>
+            <p class="empty-message">
+                @if (!string.IsNullOrEmpty(searchQuery) || !string.IsNullOrEmpty(tagFilter))
+                {
+                    <span>검색 조건에 맞는 포스트가 없습니다.</span>
+                }
+                else
+                {
+                    <span>포스트가 없습니다.</span>
+                }
+            </p>
+        </div>
     }
     else
     {
-        @foreach (var post in posts)
-        {
-            <div class="post-card">
-                <h2>@post.Title</h2>
-                <div class="post-summary">@((MarkupString)MarkdownService.ToHtml(post.Summary ?? ""))</div>
-                <p class="post-meta">작성자: @post.Author | 날짜: @post.Date.ToString("yyyy-MM-dd")</p>
-            </div>
-        }
+        <!-- 포스트 목록 -->
+        <div class="posts-container">
+            @foreach (var post in pagedResult.Items)
+            {
+                <div class="post-card">
+                    @if (!string.IsNullOrEmpty(post.Cover))
+                    {
+                        <div class="post-cover">
+                            <img src="@post.Cover" alt="@post.Title" loading="lazy">
+                        </div>
+                    }
+                    
+                    <div class="post-content">
+                        <h2 class="post-title">
+                            <a href="/blog/dimohy/@post.Id" class="post-link">@post.Title</a>
+                        </h2>
+                        
+                        @if (!string.IsNullOrEmpty(post.Summary))
+                        {
+                            <div class="post-summary">@((MarkupString)MarkdownService.ToHtml(post.Summary))</div>
+                        }
+                        
+                        <div class="post-meta">
+                            <span class="post-author">
+                                <i class="fas fa-user"></i> @post.Author
+                            </span>
+                            <span class="post-date">
+                                <i class="fas fa-calendar"></i> @((post.Date != default(DateTime) ? post.Date : post.DatePublished ?? DateTime.MinValue).ToString("yyyy-MM-dd"))
+                            </span>
+                            @if (!string.IsNullOrEmpty(post.Tags))
+                            {
+                                <span class="post-tags">
+                                    <i class="fas fa-tags"></i>
+                                    @foreach (var tag in post.Tags.Split(',', StringSplitOptions.RemoveEmptyEntries))
+                                    {
+                                        <span class="tag">@tag.Trim()</span>
+                                    }
+                                </span>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- 페이징 컴포넌트 -->
+        <Pagination Result="pagedResult" OnPageChanged="LoadPage" />
     }
 </div>
 
+<style>
+    .blog-list-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem 1rem;
+    }
+
+    .page-title {
+        color: #2c3e50;
+        text-align: center;
+        margin-bottom: 2rem;
+        font-weight: 600;
+    }
+
+    .search-filter-section {
+        background: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 0.5rem;
+        border: 1px solid #e9ecef;
+    }
+
+    .loading-container,
+    .empty-container {
+        text-align: center;
+        padding: 3rem 1rem;
+    }
+
+    .empty-icon {
+        font-size: 4rem;
+        color: #6c757d;
+        margin-bottom: 1rem;
+    }
+
+    .loading-message,
+    .empty-message {
+        color: #6c757d;
+        font-size: 1.1rem;
+        margin-top: 1rem;
+    }
+
+    .posts-container {
+        margin: 2rem 0;
+    }
+
+    .post-card {
+        background: #fff;
+        border: 1px solid #e9ecef;
+        border-radius: 0.5rem;
+        margin-bottom: 2rem;
+        overflow: hidden;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+    }
+
+    .post-card:hover {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        transform: translateY(-2px);
+    }
+
+    .post-cover {
+        height: 200px;
+        overflow: hidden;
+    }
+
+    .post-cover img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .post-content {
+        padding: 1.5rem;
+    }
+
+    .post-title {
+        margin-bottom: 1rem;
+        font-size: 1.5rem;
+        font-weight: 600;
+    }
+
+    .post-link {
+        color: #2c3e50;
+        text-decoration: none;
+        transition: color 0.3s ease;
+    }
+
+    .post-link:hover {
+        color: #007bff;
+    }
+
+    .post-summary {
+        color: #6c757d;
+        line-height: 1.6;
+        margin-bottom: 1rem;
+    }
+
+    .post-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+
+    .post-meta span {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .post-tags .tag {
+        background: #e9ecef;
+        color: #495057;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.8rem;
+        margin-left: 0.25rem;
+    }
+
+    .tag:hover {
+        background: #007bff;
+        color: #fff;
+        cursor: pointer;
+    }
+
+    /* 모바일 반응형 */
+    @@media (max-width: 768px) {
+        .post-meta {
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .search-filter-section .row > * {
+            margin-bottom: 0.5rem;
+        }
+    }
+</style>
+
 @code {
-    private List<BlogPost>? posts;
+    private PagedResult<Models.BlogPost>? pagedResult;
+    private string searchQuery = "";
+    private string tagFilter = "";
+    private int currentPage = 1;
+    private int pageSize = 10;
+    private bool isLoading = true;
 
     protected override async Task OnInitializedAsync()
     {
+        await UpdatePageTitle();
+        await LoadPosts();
+    }
+
+    /// <summary>
+    /// 페이지 타이틀을 업데이트합니다.
+    /// </summary>
+    private async Task UpdatePageTitle()
+    {
+        await JSRuntime.InvokeVoidAsync("updatePageTitle", "모든 블로그 포스트 - SlogEngine");
+    }
+
+    /// <summary>
+    /// 포스트 목록을 로드합니다.
+    /// </summary>
+    private async Task LoadPosts()
+    {
+        isLoading = true;
+        StateHasChanged();
+
         try
         {
-            posts = await Http.GetFromJsonAsync<List<BlogPost>>("http://localhost:5024/blog/dimohy");
+            var request = new PagedRequest
+            {
+                Page = currentPage,
+                PageSize = pageSize,
+                Search = string.IsNullOrWhiteSpace(searchQuery) ? null : searchQuery,
+                Tag = string.IsNullOrWhiteSpace(tagFilter) ? null : tagFilter
+            };
+
+            pagedResult = await BlogApiService.GetPagedPostsAsync("dimohy", request);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            // 에러 처리
-            posts = new List<BlogPost>();
+            Console.WriteLine($"포스트 로드 실패: {ex.Message}");
+            pagedResult = new PagedResult<Models.BlogPost>
+            {
+                Items = new List<Models.BlogPost>(),
+                TotalCount = 0,
+                CurrentPage = currentPage,
+                PageSize = pageSize
+            };
         }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// 검색을 실행합니다.
+    /// </summary>
+    private async Task SearchPosts()
+    {
+        currentPage = 1; // 검색 시 첫 페이지로 이동
+        await LoadPosts();
+    }
+
+    /// <summary>
+    /// 필터를 초기화합니다.
+    /// </summary>
+    private async Task ClearFilters()
+    {
+        searchQuery = "";
+        tagFilter = "";
+        currentPage = 1;
+        await LoadPosts();
+    }
+
+    /// <summary>
+    /// 페이지 크기 변경 이벤트를 처리합니다.
+    /// </summary>
+    /// <param name="e">변경 이벤트</param>
+    private async Task OnPageSizeChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var newPageSize))
+        {
+            pageSize = newPageSize;
+            currentPage = 1; // 페이지 크기 변경 시 첫 페이지로 이동
+            await LoadPosts();
+        }
+    }
+
+    /// <summary>
+    /// 지정된 페이지로 이동합니다.
+    /// </summary>
+    /// <param name="page">이동할 페이지 번호</param>
+    private async Task LoadPage(int page)
+    {
+        currentPage = page;
+        await LoadPosts();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         await base.OnAfterRenderAsync(firstRender);
         
-        if (posts != null && posts.Any())
+        if (pagedResult?.Items != null && pagedResult.Items.Any())
         {
             try
             {

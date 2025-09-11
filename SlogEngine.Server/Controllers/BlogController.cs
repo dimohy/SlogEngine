@@ -22,6 +22,35 @@ public class BlogController : ControllerBase
         return Ok(posts);
     }
 
+    /// <summary>
+    /// 페이징된 블로그 포스트 목록을 조회합니다.
+    /// </summary>
+    /// <param name="username">사용자명</param>
+    /// <param name="page">페이지 번호 (기본값: 1)</param>
+    /// <param name="pageSize">페이지당 항목 수 (기본값: 10)</param>
+    /// <param name="search">검색어 (선택적)</param>
+    /// <param name="tag">태그 필터 (선택적)</param>
+    /// <returns>페이징된 블로그 포스트 결과</returns>
+    [HttpGet("{username}/paged")]
+    public IActionResult GetPagedPosts(
+        string username, 
+        [FromQuery] int page = 1, 
+        [FromQuery] int pageSize = 10, 
+        [FromQuery] string? search = null,
+        [FromQuery] string? tag = null)
+    {
+        var request = new PagedRequest
+        {
+            Page = Math.Max(1, page),
+            PageSize = Math.Max(1, Math.Min(100, pageSize)), // 1-100 범위로 제한
+            Search = search,
+            Tag = tag
+        };
+
+        var result = _blogService.GetPagedPosts(username, request);
+        return Ok(result);
+    }
+
     [HttpGet("{username}/{postId}")]
     public IActionResult GetPost(string username, string postId)
     {

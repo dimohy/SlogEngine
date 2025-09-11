@@ -1,8 +1,9 @@
-@page "/blogs/{id}"
+@page "/blog/{userId}"
 @layout BlogLayout
 @using SlogEngine.WebAssembly.Models
 @using SlogEngine.WebAssembly.Services
 @using SlogEngine.WebAssembly.Components
+@using System.Web
 @inject HttpClient Http
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
@@ -10,28 +11,93 @@
 @inject IMarkdownService MarkdownService
 
 <div class="blog-container">
-
     <div class="add-post-section">
         <button class="custom-btn primary" @onclick="ShowAddForm">새 포스트 추가</button>
     </div>
 
-    @if (posts == null)
+    <div class="blog-header">
+        <!-- 검색 및 필터 섹션 -->
+        <div class="search-filter-section">
+            <div class="search-controls">
+                <div class="filter-controls">
+                    <input type="text" class="form-control" placeholder="태그 필터..." 
+                           @bind="tagFilter" @bind:event="oninput" @onkeydown="@(async (e) => { if (e.Key == "Enter") await SearchPosts(); })">
+                </div>
+                <div class="search-input-group">
+                    <input type="text" class="form-control" placeholder="검색어를 입력하세요..." 
+                           @bind="searchQuery" @bind:event="oninput" @onkeydown="@(async (e) => { if (e.Key == "Enter") await SearchPosts(); })">
+                </div>
+                <div class="page-size-controls">
+                    <select class="form-select" value="@pageSize" @onchange="OnPageSizeChanged">
+                        <option value="5">5개씩</option>
+                        <option value="10">10개씩</option>
+                        <option value="20">20개씩</option>
+                    </select>
+                </div>
+                <div class="search-button-group">
+                    <button class="custom-btn secondary icon" type="button" @onclick="SearchPosts" title="검색">
+                        🔍
+                    </button>
+                </div>
+                @if (!string.IsNullOrEmpty(searchQuery) || !string.IsNullOrEmpty(tagFilter))
+                {
+                    <div class="clear-filters">
+                        <button class="custom-btn secondary small" @onclick="ClearFilters">
+                            ❌ 필터 초기화
+                        </button>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    @if (isLoading)
     {
-        <p class="loading">로딩 중...</p>
+        <div class="loading-container">
+            <div class="spinner"></div>
+            <p class="loading">포스트를 불러오는 중...</p>
+        </div>
     }
-    else if (!posts.Any())
+    else if (pagedResult?.Items == null || !pagedResult.Items.Any())
     {
-        <p class="no-posts">포스트가 없습니다.</p>
+        <div class="no-posts-container">
+            <div class="no-posts-icon">📝</div>
+            <p class="no-posts">
+                @if (!string.IsNullOrEmpty(searchQuery) || !string.IsNullOrEmpty(tagFilter))
+                {
+                    <span>검색 조건에 맞는 포스트가 없습니다.</span>
+                }
+                else
+                {
+                    <span>포스트가 없습니다.</span>
+                }
+            </p>
+        </div>
     }
     else
     {
-        @foreach (var post in posts)
+        @foreach (var post in pagedResult.Items)
         {
             <article class="post">
                 <div class="post-header">
                     <div class="post-header-left">
-                        <h2 class="post-title">@post.Title</h2>
-                        <p class="post-meta"><span class="author">👤 @post.Author</span> <span class="date">📅 @post.Date.ToString("yyyy-MM-dd")</span></p>
+                        <h2 class="post-title">
+                            <a href="/blog/@UserId/@post.Id?returnUrl=@Uri.EscapeDataString(Navigation.Uri)" class="post-title-link">@post.Title</a>
+                        </h2>
+                        <div class="post-meta">
+                            <span class="author">👤 @post.Author</span> 
+                            <span class="date">📅 @((post.Date != default(DateTime) ? post.Date : post.DatePublished ?? DateTime.MinValue).ToString("yyyy-MM-dd"))</span>
+                            @if (!string.IsNullOrEmpty(post.Tags))
+                            {
+                                <span class="tags">
+                                    🏷️ 
+                                    @foreach (var tag in post.Tags.Split(',', StringSplitOptions.RemoveEmptyEntries))
+                                    {
+                                        <span class="tag" @onclick="() => FilterByTag(tag.Trim())">@tag.Trim()</span>
+                                    }
+                                </span>
+                            }
+                        </div>
                     </div>
                     <div class="post-actions">
                         <button class="custom-btn warning icon" @onclick="() => EditPost(post)" title="수정">
@@ -42,10 +108,17 @@
                         </button>
                     </div>
                 </div>
-                <p class="post-summary">@((MarkupString)MarkdownService.ToHtml(post.Summary ?? ""))</p>
-                <div class="post-content">@((MarkupString)MarkdownService.ToHtml(post.Content ?? ""))</div>
+                @if (!string.IsNullOrEmpty(post.Summary))
+                {
+                    <p class="post-summary">@((MarkupString)MarkdownService.ToHtml(post.Summary))</p>
+                }
             </article>
         }
+
+        <!-- 페이징 컴포넌트 -->
+        <div class="pagination-wrapper">
+            <Pagination Result="pagedResult" OnPageChanged="LoadPage" />
+        </div>
     }
 </div>
 
@@ -54,32 +127,319 @@
     <EditPostModal editingPost="@editingPost" IsNewPost="@isNewPost" OnUpdate="@UpdatePostFromModal" OnAdd="@AddPostFromModal" OnCancel="@CancelEdit" />
 }
 
+<style>
+    .add-post-section {
+        margin-bottom: 1.5rem;
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    .blog-header {
+        margin-bottom: 2rem;
+        padding: 1rem;
+        background: var(--bg-secondary);
+        border-radius: 0.5rem;
+        border: 1px solid var(--border-color);
+    }
+
+    .search-filter-section {
+        margin: 0;
+    }
+
+    .search-controls {
+        display: flex;
+        flex-direction: row;
+        gap: 0.75rem;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .filter-controls {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+    }
+
+    .search-input-group {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+        flex: 1;
+        min-width: 250px;
+    }
+
+    .page-size-controls {
+        display: flex;
+        align-items: center;
+    }
+
+    .search-button-group {
+        display: flex;
+        align-items: center;
+    }
+
+    .clear-filters {
+        margin: 0;
+    }
+
+    .form-control, .form-select {
+        padding: 0.5rem;
+        border: 1px solid var(--border-color);
+        border-radius: 0.25rem;
+        font-size: 0.9rem;
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        transition: border-color 0.2s ease;
+    }
+
+    .form-control:focus, .form-select:focus {
+        outline: none;
+        border-color: var(--accent-color);
+    }
+
+    .search-input-group .form-control {
+        flex: 1;
+        min-width: 200px;
+    }
+
+    .filter-controls .form-control {
+        width: 150px;
+    }
+
+    .page-size-controls .form-select {
+        width: 100px;
+    }
+
+    .loading-container {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: var(--text-secondary);
+    }
+
+    .spinner {
+        width: 2rem;
+        height: 2rem;
+        border: 0.25rem solid var(--border-color);
+        border-top: 0.25rem solid var(--accent-color);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 1rem;
+    }
+
+    @@keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .no-posts-container {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: var(--text-secondary);
+    }
+
+    .no-posts-icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        opacity: 0.6;
+    }
+
+    .no-posts {
+        font-size: 1.1rem;
+        margin: 0;
+    }
+
+    .post-title-link {
+        color: var(--text-primary);
+        text-decoration: none;
+        transition: color 0.2s ease;
+    }
+
+    .post-title-link:hover {
+        color: var(--accent-color);
+        text-decoration: underline;
+    }
+
+    .post-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        align-items: center;
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        margin-top: 0.5rem;
+    }
+
+    .post-meta .author,
+    .post-meta .date {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .post-meta .tags {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        flex-wrap: wrap;
+    }
+
+    .tag {
+        background: var(--bg-secondary);
+        color: var(--text-primary);
+        border: 1px solid var(--border-color);
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.8rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .tag:hover {
+        background: var(--accent-color);
+        color: var(--text-on-accent);
+        border-color: var(--accent-color);
+    }
+
+    .custom-btn.small {
+        font-size: 0.8rem;
+        padding: 0.25rem 0.5rem;
+    }
+
+    .pagination-wrapper {
+        margin-top: 3rem;
+        padding: 1.5rem 0;
+        border-top: 1px solid var(--border-color);
+    }
+
+    /* 모바일 반응형 */
+    @@media (max-width: 768px) {
+        .search-controls {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 0.75rem;
+        }
+        
+        .search-input-group {
+            min-width: auto;
+        }
+        
+        .filter-controls,
+        .page-size-controls,
+        .search-button-group {
+            justify-content: center;
+        }
+        
+        .search-input-group .form-control {
+            min-width: auto;
+        }
+        
+        .filter-controls .form-control,
+        .page-size-controls .form-select {
+            width: 100%;
+        }
+        
+        .post-meta {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+    }
+</style>
+
 @code {
     [Parameter]
-    public string? Id { get; set; }
+    public string? UserId { get; set; }
 
-    private List<BlogPost>? posts;
-    private BlogPost? editingPost;
+    private PagedResult<Models.BlogPost>? pagedResult;
+    private List<Models.BlogPost>? posts; // 기존 호환성을 위해 유지
+    private Models.BlogPost? editingPost;
     private bool isNewPost = false;
     private BlogMeta? blogMeta;
+    
+    // 페이징 관련 필드
+    private string searchQuery = "";
+    private string tagFilter = "";
+    private int currentPage = 1;
+    private int pageSize = 10;
+    private bool isLoading = true;
 
     protected override async Task OnInitializedAsync()
     {
-        if (string.IsNullOrEmpty(Id))
+        if (string.IsNullOrEmpty(UserId))
         {
             Navigation.NavigateTo("/");
             return;
         }
 
+        // URL 쿼리 파라미터에서 상태 복원
+        var uri = new Uri(Navigation.Uri);
+        var queryDictionary = HttpUtility.ParseQueryString(uri.Query);
+        
+        if (int.TryParse(queryDictionary["page"], out int page) && page > 0)
+        {
+            currentPage = page;
+        }
+        
+        if (int.TryParse(queryDictionary["pageSize"], out int size) && size > 0)
+        {
+            pageSize = size;
+        }
+        
+        searchQuery = queryDictionary["search"] ?? "";
+        tagFilter = queryDictionary["tag"] ?? "";
+
         await LoadPosts();
         await LoadMeta();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (string.IsNullOrEmpty(UserId))
+        {
+            Navigation.NavigateTo("/");
+            return;
+        }
+
+        // URL 쿼리 파라미터에서 상태 복원
+        var uri = new Uri(Navigation.Uri);
+        var queryDictionary = HttpUtility.ParseQueryString(uri.Query);
+        
+        var newPage = 1;
+        var newPageSize = 10;
+        var newSearchQuery = "";
+        var newTagFilter = "";
+        
+        if (int.TryParse(queryDictionary["page"], out int page) && page > 0)
+        {
+            newPage = page;
+        }
+        
+        if (int.TryParse(queryDictionary["pageSize"], out int size) && size > 0)
+        {
+            newPageSize = size;
+        }
+        
+        newSearchQuery = queryDictionary["search"] ?? "";
+        newTagFilter = queryDictionary["tag"] ?? "";
+
+        // 상태가 변경된 경우에만 업데이트
+        if (newPage != currentPage || newPageSize != pageSize || 
+            newSearchQuery != searchQuery || newTagFilter != tagFilter)
+        {
+            currentPage = newPage;
+            pageSize = newPageSize;
+            searchQuery = newSearchQuery;
+            tagFilter = newTagFilter;
+            
+            await LoadPosts();
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         await base.OnAfterRenderAsync(firstRender);
         
-        if (posts != null && posts.Any())
+        if (pagedResult?.Items != null && pagedResult.Items.Any())
         {
             try
             {
@@ -97,43 +457,183 @@
         }
     }
 
+    /// <summary>
+    /// 포스트 목록을 로드합니다.
+    /// </summary>
     private async Task LoadPosts()
     {
-        if (string.IsNullOrEmpty(Id)) return;
+        if (string.IsNullOrEmpty(UserId)) return;
 
-        posts = await BlogApiService.GetPostsAsync(Id) ?? new List<BlogPost>();
+        isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            var request = new PagedRequest
+            {
+                Page = currentPage,
+                PageSize = pageSize,
+                Search = string.IsNullOrWhiteSpace(searchQuery) ? null : searchQuery,
+                Tag = string.IsNullOrWhiteSpace(tagFilter) ? null : tagFilter
+            };
+
+            pagedResult = await BlogApiService.GetPagedPostsAsync(UserId, request);
+            
+            // 기존 호환성을 위해 posts도 업데이트
+            posts = pagedResult?.Items?.ToList() ?? new List<Models.BlogPost>();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"포스트 로드 실패: {ex.Message}");
+            pagedResult = new PagedResult<Models.BlogPost>
+            {
+                Items = new List<Models.BlogPost>(),
+                TotalCount = 0,
+                CurrentPage = currentPage,
+                PageSize = pageSize
+            };
+            posts = new List<Models.BlogPost>();
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// 현재 상태를 URL에 반영합니다.
+    /// </summary>
+    private void UpdateUrl()
+    {
+        var queryParams = new List<string>();
+        
+        if (currentPage > 1)
+            queryParams.Add($"page={currentPage}");
+            
+        if (pageSize != 10)
+            queryParams.Add($"pageSize={pageSize}");
+            
+        if (!string.IsNullOrEmpty(searchQuery))
+            queryParams.Add($"search={Uri.EscapeDataString(searchQuery)}");
+            
+        if (!string.IsNullOrEmpty(tagFilter))
+            queryParams.Add($"tag={Uri.EscapeDataString(tagFilter)}");
+        
+        var queryString = queryParams.Any() ? "?" + string.Join("&", queryParams) : "";
+        var newUrl = $"/blog/{UserId}{queryString}";
+        
+        Navigation.NavigateTo(newUrl, replace: true);
+    }
+
+    /// <summary>
+    /// 검색을 실행합니다.
+    /// </summary>
+    private async Task SearchPosts()
+    {
+        currentPage = 1; // 검색 시 첫 페이지로 이동
+        UpdateUrl();
+        await LoadPosts();
+    }
+
+    /// <summary>
+    /// 필터를 초기화합니다.
+    /// </summary>
+    private async Task ClearFilters()
+    {
+        searchQuery = "";
+        tagFilter = "";
+        currentPage = 1;
+        UpdateUrl();
+        await LoadPosts();
+    }
+
+    /// <summary>
+    /// 태그로 필터링합니다.
+    /// </summary>
+    /// <param name="tag">필터링할 태그</param>
+    private async Task FilterByTag(string tag)
+    {
+        tagFilter = tag;
+        currentPage = 1;
+        UpdateUrl();
+        await LoadPosts();
+    }
+
+    /// <summary>
+    /// 페이지 크기 변경 이벤트를 처리합니다.
+    /// </summary>
+    /// <param name="e">변경 이벤트</param>
+    private async Task OnPageSizeChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var newPageSize))
+        {
+            pageSize = newPageSize;
+            currentPage = 1; // 페이지 크기 변경 시 첫 페이지로 이동
+            UpdateUrl();
+            await LoadPosts();
+        }
+    }
+
+    /// <summary>
+    /// 지정된 페이지로 이동합니다.
+    /// </summary>
+    /// <param name="page">이동할 페이지 번호</param>
+    private async Task LoadPage(int page)
+    {
+        currentPage = page;
+        UpdateUrl();
+        await LoadPosts();
     }
 
     private async Task LoadMeta()
     {
-        if (string.IsNullOrEmpty(Id)) return;
+        if (string.IsNullOrEmpty(UserId)) return;
 
-        blogMeta = await BlogApiService.GetBlogMetaAsync(Id);
+        blogMeta = await BlogApiService.GetBlogMetaAsync(UserId);
         if (blogMeta == null)
         {
-            blogMeta = new BlogMeta { Title = $"{Id} 블로그" };
+            blogMeta = new BlogMeta { Title = $"{UserId} 블로그" };
+        }
+        
+        // 페이지 타이틀 업데이트
+        await UpdatePageTitle();
+    }
+
+    /// <summary>
+    /// 페이지 타이틀을 업데이트합니다.
+    /// </summary>
+    private async Task UpdatePageTitle()
+    {
+        if (blogMeta != null && !string.IsNullOrEmpty(blogMeta.Title))
+        {
+            await JSRuntime.InvokeVoidAsync("updatePageTitle", $"{blogMeta.Title} - SlogEngine");
+        }
+        else
+        {
+            await JSRuntime.InvokeVoidAsync("updatePageTitle", "SlogEngine");
         }
     }
 
     private void ShowAddForm()
     {
-        editingPost = new BlogPost
+        editingPost = new Models.BlogPost
         {
             Id = Guid.NewGuid().ToString(),
             Title = "",
             Summary = "",
             Content = "",
-            Author = Id ?? "",
+            Author = UserId ?? "",
             Date = DateTime.Now
         };
         isNewPost = true;
         StateHasChanged();
     }
 
-    private void EditPost(BlogPost post)
+    private void EditPost(Models.BlogPost post)
     {
         Console.WriteLine($"EditPost called for post: {post.Title}");
-        editingPost = new BlogPost
+        editingPost = new Models.BlogPost
         {
             Id = post.Id,
             Title = post.Title,
@@ -155,57 +655,57 @@
         StateHasChanged(); // UI 업데이트 강제 실행
     }
 
-    private async Task AddPostFromModal(BlogPost newPost)
+    private async Task AddPostFromModal(Models.BlogPost newPost)
     {
-        if (string.IsNullOrEmpty(Id) || newPost == null) 
+        if (string.IsNullOrEmpty(UserId) || newPost == null) 
         {
-            Console.WriteLine($"AddPostFromModal: Id={Id}, newPost is null: {newPost == null}");
+            Console.WriteLine($"AddPostFromModal: UserId={UserId}, newPost is null: {newPost == null}");
             return;
         }
 
         Console.WriteLine($"AddPostFromModal: Adding new post with title: {newPost.Title}");
-        var success = await BlogApiService.AddPostAsync(Id, newPost);
+        var success = await BlogApiService.AddPostAsync(UserId, newPost);
         Console.WriteLine($"AddPostFromModal: Add result: {success}");
         
         if (success)
         {
             editingPost = null;
             isNewPost = false;
-            await LoadPosts();
+            await LoadPosts(); // 페이징된 목록을 새로고침
         }
     }
 
-    private async Task UpdatePostFromModal(BlogPost updatedPost)
+    private async Task UpdatePostFromModal(Models.BlogPost updatedPost)
     {
-        if (string.IsNullOrEmpty(Id) || updatedPost == null) 
+        if (string.IsNullOrEmpty(UserId) || updatedPost == null) 
         {
-            Console.WriteLine($"UpdatePostFromModal: Id={Id}, updatedPost is null: {updatedPost == null}");
+            Console.WriteLine($"UpdatePostFromModal: UserId={UserId}, updatedPost is null: {updatedPost == null}");
             return;
         }
 
         Console.WriteLine($"UpdatePostFromModal: Updating post {updatedPost.Id} with title: {updatedPost.Title}");
-        var success = await BlogApiService.UpdatePostAsync(Id, updatedPost.Id, updatedPost);
+        var success = await BlogApiService.UpdatePostAsync(UserId, updatedPost.Id, updatedPost);
         Console.WriteLine($"UpdatePostFromModal: Update result: {success}");
         
         if (success)
         {
             editingPost = null;
             isNewPost = false;
-            await LoadPosts();
+            await LoadPosts(); // 페이징된 목록을 새로고침
         }
     }
 
     private async Task DeletePost(string postId)
     {
-        if (string.IsNullOrEmpty(Id)) return;
+        if (string.IsNullOrEmpty(UserId)) return;
 
         var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "정말 삭제하시겠습니까?");
         if (!confirmed) return;
 
-        var success = await BlogApiService.DeletePostAsync(Id, postId);
+        var success = await BlogApiService.DeletePostAsync(UserId, postId);
         if (success)
         {
-            await LoadPosts();
+            await LoadPosts(); // 페이징된 목록을 새로고침
         }
     }
 }

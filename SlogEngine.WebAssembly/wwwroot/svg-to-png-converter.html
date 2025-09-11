@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>SVG to PNG Converter</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; }
+        canvas { border: 1px solid #ccc; margin: 10px 0; }
+        button { padding: 10px 20px; background: #4f46e5; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #3730a3; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>SVG to PNG Favicon Converter</h1>
+        <p>이 페이지는 favicon.svg를 favicon.png로 변환합니다.</p>
+        
+        <div>
+            <h3>미리보기 (32x32):</h3>
+            <canvas id="canvas32" width="32" height="32"></canvas>
+            <button onclick="downloadPng(32)">32x32 PNG 다운로드</button>
+        </div>
+        
+        <div>
+            <h3>미리보기 (64x64):</h3>
+            <canvas id="canvas64" width="64" height="64"></canvas>
+            <button onclick="downloadPng(64)">64x64 PNG 다운로드</button>
+        </div>
+    </div>
+
+    <script>
+        function loadAndConvertSvg() {
+            fetch('favicon.svg')
+                .then(response => response.text())
+                .then(svgText => {
+                    convertSvgToPng(svgText, 32);
+                    convertSvgToPng(svgText, 64);
+                })
+                .catch(error => {
+                    console.error('SVG 파일을 로드할 수 없습니다:', error);
+                    alert('favicon.svg 파일을 찾을 수 없습니다. wwwroot 폴더에 있는지 확인하세요.');
+                });
+        }
+
+        function convertSvgToPng(svgText, size) {
+            const canvas = document.getElementById(`canvas${size}`);
+            const ctx = canvas.getContext('2d');
+            
+            const img = new Image();
+            const blob = new Blob([svgText], {type: 'image/svg+xml'});
+            const url = URL.createObjectURL(blob);
+            
+            img.onload = function() {
+                ctx.clearRect(0, 0, size, size);
+                ctx.drawImage(img, 0, 0, size, size);
+                URL.revokeObjectURL(url);
+            };
+            
+            img.onerror = function() {
+                console.error('SVG 이미지 로드 실패');
+            };
+            
+            img.src = url;
+        }
+
+        function downloadPng(size) {
+            const canvas = document.getElementById(`canvas${size}`);
+            canvas.toBlob(function(blob) {
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = size === 32 ? 'favicon.png' : `favicon-${size}.png`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            }, 'image/png');
+        }
+
+        // 페이지 로드 시 자동 변환
+        window.addEventListener('DOMContentLoaded', loadAndConvertSvg);
+    </script>
+</body>
+</html>

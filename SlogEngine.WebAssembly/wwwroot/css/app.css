@@ -244,6 +244,10 @@ h1, h2, h3, h4, h5, h6 {
     --pre-text: #1f2937; /* 라이트 테마에서 더 진한 텍스트 */
     --table-stripe: rgba(79, 172, 254, 0.02);
     --table-hover: rgba(79, 172, 254, 0.05);
+    /* 태그 색상 */
+    --tag-bg: #f1f5f9;
+    --tag-text: #475569;
+    --tag-border: #e2e8f0;
 }
 
 /* 다크 테마 색상 시스템 */
@@ -285,6 +289,10 @@ body.dark-theme {
     --pre-text: #f9fafb; /* 다크 테마에서 더 밝은 텍스트 */
     --table-stripe: rgba(255, 255, 255, 0.02);
     --table-hover: rgba(255, 255, 255, 0.05);
+    /* 태그 색상 */
+    --tag-bg: #334155;
+    --tag-text: #cbd5e1;
+    --tag-border: rgba(255, 255, 255, 0.15);
 }
 
 body.dark-theme,

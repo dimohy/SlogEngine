@@ -19,7 +19,7 @@ builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(optio
 
 // Register services
 builder.Services.AddScoped<IWeatherService, WeatherService>();
-builder.Services.AddScoped<IBlogService, BlogService>();
+builder.Services.AddScoped<IBlogService, MarkdownBlogService>();
 
 // Add CORS
 builder.Services.AddCors(options =>

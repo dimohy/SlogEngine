@@ -6,6 +6,7 @@
 @using SlogEngine.WebAssembly.Models
 @using SlogEngine.WebAssembly.Services
 @using SlogEngine.WebAssembly.Components
+@implements IDisposable
 
 <div class="blog-layout">
     <header class="blog-header">
@@ -88,15 +89,38 @@
         isDarkTheme = theme == "dark";
         UpdateTheme();
 
+        // 페이지 아이콘 업데이트
+        await JSRuntime.InvokeVoidAsync("updatePageIcon", "favicon.svg");
+
         // 블로그 메타 정보 로드
         await LoadBlogMeta();
+        
+        // 라우팅 변경 이벤트 구독
+        Navigation.LocationChanged += OnLocationChanged;
+    }
+
+    /// <summary>
+    /// 라우팅 변경 시 타이틀 업데이트
+    /// </summary>
+    private async void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        await LoadBlogMeta();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// 컴포넌트 해제 시 이벤트 구독 해제
+    /// </summary>
+    public void Dispose()
+    {
+        Navigation.LocationChanged -= OnLocationChanged;
     }
 
     private async Task LoadBlogMeta()
     {
         var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
         var path = uri.AbsolutePath;
-        if (path.StartsWith("/blogs/"))
+        if (path.StartsWith("/blog/"))
         {
             var segments = path.Split('/');
             if (segments.Length >= 3)
@@ -110,6 +134,21 @@
         {
             blogTitle = "블로그 타이틀";
         }
+        
+        // 페이지 타이틀 업데이트
+        await UpdatePageTitle();
+    }
+
+    /// <summary>
+    /// 페이지 타이틀을 업데이트합니다.
+    /// </summary>
+    private async Task UpdatePageTitle()
+    {
+        var pageTitle = string.IsNullOrEmpty(blogTitle) || blogTitle == "블로그 타이틀" 
+            ? "SlogEngine" 
+            : $"{blogTitle} - SlogEngine";
+        
+        await JSRuntime.InvokeVoidAsync("updatePageTitle", pageTitle);
     }
 
     private void ShowSettingsModal()
@@ -146,7 +185,7 @@
     {
         var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
         var path = uri.AbsolutePath;
-        if (path.StartsWith("/blogs/"))
+        if (path.StartsWith("/blog/"))
         {
             var segments = path.Split('/');
             if (segments.Length >= 3)
@@ -156,6 +195,8 @@
                 if (success)
                 {
                     blogTitle = editingMeta.Title;
+                    // 페이지 타이틀도 함께 업데이트
+                    await UpdatePageTitle();
                     showSettingsModal = false;
                     StateHasChanged();
                 }

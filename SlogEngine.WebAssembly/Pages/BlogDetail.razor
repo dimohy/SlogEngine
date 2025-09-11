@@ -1,0 +1,793 @@
+@page "/blog/{userId}/{blogPostId}"
+@layout BlogLayout
+@using SlogEngine.WebAssembly.Models
+@using SlogEngine.WebAssembly.Services
+@using System.Web
+@inject BlogApiService BlogApiService
+@inject IMarkdownService MarkdownService
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+@inject IClipboardService ClipboardService
+@implements IAsyncDisposable
+
+<div class="blog-post-container">
+    @if (isLoading)
+    {
+        <div class="loading-container">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">로딩 중...</span>
+            </div>
+            <p class="loading-message">포스트를 불러오는 중...</p>
+        </div>
+    }
+    else if (post == null)
+    {
+        <div class="error-container">
+            <i class="fas fa-exclamation-triangle error-icon"></i>
+            <h2>포스트를 찾을 수 없습니다</h2>
+            <p>요청하신 포스트가 존재하지 않거나 삭제되었습니다.</p>
+            <button class="btn btn-primary" @onclick="GoBackToList">
+                <i class="fas fa-arrow-left"></i> 목록으로 돌아가기
+            </button>
+        </div>
+    }
+    else
+    {
+        <!-- 포스트 상세 내용 -->
+        <article class="post-detail">
+            <!-- 포스트 헤더 -->
+            <header class="post-header">
+                @if (!string.IsNullOrEmpty(post.Cover))
+                {
+                    <div class="post-cover">
+                        <img src="@post.Cover" alt="@post.Title" />
+                    </div>
+                }
+                
+                <div class="post-title-section">
+                    @if (isEditMode)
+                    {
+                        <div class="form-group mb-3">
+                            <input type="text" class="form-control post-title-edit" @bind="editTitle" placeholder="포스트 제목을 입력하세요" />
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="post-title-container">
+                            <h1 class="post-title">@post.Title</h1>
+                            <!-- 포스트 관리 버튼 -->
+                            <div class="post-actions">
+                                <button class="custom-btn warning icon" @onclick="ToggleEditMode" title="수정">
+                                    ✏️
+                                </button>
+                                <button class="custom-btn danger icon" @onclick="DeletePost" title="삭제">
+                                    🗑️
+                                </button>
+                            </div>
+                        </div>
+                    }
+                    
+                    <div class="post-meta">
+                        <span class="post-author">
+                            <i class="fas fa-user"></i> @post.Author
+                        </span>
+                        <span class="post-date">
+                            <i class="fas fa-calendar"></i> 
+                            @((post.Date != default(DateTime) ? post.Date : post.DatePublished ?? DateTime.MinValue).ToString("yyyy-MM-dd HH:mm"))
+                        </span>
+                        @if (!string.IsNullOrEmpty(post.Tags))
+                        {
+                            <div class="post-tags">
+                                <i class="fas fa-tags"></i>
+                                @foreach (var tag in post.Tags.Split(',', StringSplitOptions.RemoveEmptyEntries))
+                                {
+                                    <span class="tag">@tag.Trim()</span>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            </header>
+
+            <!-- 포스트 본문 -->
+            @if (isEditMode)
+            {
+                <!-- 편집 모드 -->
+                <div class="post-edit-form">
+                    <div class="form-group mb-3">
+                        <label for="editTitle" class="form-label">제목</label>
+                        <input type="text" id="editTitle" class="form-control" @bind="editTitle" />
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label for="editSummary" class="form-label">요약</label>
+                        <textarea id="editSummary" class="form-control" rows="3" @bind="editSummary"></textarea>
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label for="editTags" class="form-label">태그 (쉼표로 구분)</label>
+                        <input type="text" id="editTags" class="form-control" @bind="editTags" />
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label for="editContent" class="form-label">내용</label>
+                        <textarea id="editContent" class="form-control markdown-editor" rows="20" @bind="editContent"></textarea>
+                    </div>
+                    
+                    <div class="edit-actions">
+                        <button class="custom-btn success" @onclick="SavePost">
+                            💾 저장
+                        </button>
+                        <button class="custom-btn secondary" @onclick="CancelEdit">
+                            ❌ 취소
+                        </button>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <!-- 보기 모드 -->
+                <div class="post-content">
+                    @((MarkupString)MarkdownService.ToHtml(post.Content ?? ""))
+                </div>
+            }
+        </article>
+
+        <!-- 네비게이션 -->
+        <div class="post-navigation">
+            <button class="custom-btn secondary" @onclick="GoBackToList">
+                ⬅️ 목록으로 돌아가기
+            </button>
+        </div>
+    }
+</div>
+
+<style>
+    .blog-post-container {
+        margin: 0 auto;
+        padding: 0;
+        line-height: 1.6;
+    }
+
+    .loading-container,
+    .error-container {
+        text-align: center;
+        padding: 3rem 1rem;
+    }
+
+    .error-icon {
+        font-size: 4rem;
+        color: #dc3545;
+        margin-bottom: 1rem;
+    }
+
+    .loading-message {
+        color: #6c757d;
+        font-size: 1.1rem;
+        margin-top: 1rem;
+    }
+
+    .post-detail {
+        background: var(--card-bg);
+        border-radius: 0.5rem;
+        overflow: hidden;
+        margin-bottom: 2rem;
+        padding: 3rem 2rem;
+        border: 1px solid var(--border-color);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        transition: background-color 0.3s ease, border-color 0.3s ease;
+    }
+
+    .post-header {
+        margin-bottom: 2rem;
+    }
+
+    .post-cover {
+        margin-bottom: 2rem;
+        border-radius: 0.5rem;
+        overflow: hidden;
+    }
+
+    .post-cover img {
+        width: 100%;
+        height: auto;
+        max-height: 400px;
+        object-fit: cover;
+    }
+
+    .post-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: var(--text-color);
+        margin-bottom: 1rem;
+        line-height: 1.2;
+        flex: 1;
+    }
+
+    .post-title-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+        margin-bottom: 0;
+    }
+
+    .post-title-edit {
+        font-size: 2rem;
+        font-weight: 600;
+        color: var(--text-color);
+        background: var(--input-bg);
+        border: 2px solid var(--primary-color);
+        padding: 0.75rem;
+        margin-bottom: 1rem;
+        border-radius: 0.375rem;
+    }
+
+    .post-title-edit:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.2rem rgba(14, 165, 233, 0.25);
+        outline: 0;
+    }
+
+    .post-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        font-size: 0.9rem;
+        color: #6c757d;
+        margin: 0 0 1rem 0;
+    }
+
+    .post-meta span,
+    .post-meta div {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .post-actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-shrink: 0;
+        align-items: flex-start;
+    }
+
+    .post-actions .custom-btn {
+        font-size: 0.9rem;
+        min-width: auto;
+        flex-shrink: 0;
+    }
+
+    .post-edit-form {
+        background: var(--card-bg);
+        color: var(--text-color);
+        padding: 2rem;
+        border-radius: 0.5rem;
+        margin-bottom: 2rem;
+        border: 1px solid var(--border-color);
+    }
+
+    .post-edit-form .form-label {
+        font-weight: 600;
+        color: var(--text-color);
+        margin-bottom: 0.5rem;
+    }
+
+    .post-edit-form .form-control {
+        background: var(--input-bg);
+        color: var(--text-color);
+        border: 1px solid var(--border-color);
+        border-radius: 0.375rem;
+        padding: 0.75rem;
+        font-size: 1rem;
+        transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    }
+
+    .post-edit-form .form-control:focus {
+        border-color: var(--primary-color);
+        outline: 0;
+        box-shadow: 0 0 0 0.2rem rgba(14, 165, 233, 0.25);
+    }
+
+    .post-edit-form .markdown-editor {
+        font-family: 'Courier New', monospace;
+        font-size: 0.9rem;
+        line-height: 1.5;
+    }
+
+    .edit-actions {
+        display: flex;
+        gap: 1rem;
+        justify-content: flex-start;
+        margin-top: 1.5rem;
+    }
+
+    .post-tags {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .post-tags .tag {
+        background: var(--tag-bg);
+        color: var(--tag-text);
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.8rem;
+        text-decoration: none;
+        transition: all 0.2s;
+        border: 1px solid var(--tag-border);
+    }
+
+    .post-tags .tag:hover {
+        background: var(--sidebar-bg, #0ea5e9);
+        color: var(--sidebar-text, #ffffff);
+        border-color: var(--sidebar-bg, #0ea5e9);
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+
+
+    .post-content {
+        font-size: 1.1rem;
+        line-height: 1.8;
+        color: var(--text-color);
+    }
+
+    /* 마크다운 콘텐츠 스타일링 */
+    .post-content h1,
+    .post-content h2,
+    .post-content h3,
+    .post-content h4,
+    .post-content h5,
+    .post-content h6 {
+        margin-top: 2rem;
+        margin-bottom: 1rem;
+        font-weight: 600;
+        color: var(--text-color);
+    }
+
+    .post-content h1 { font-size: 2rem; }
+    .post-content h2 { font-size: 1.75rem; }
+    .post-content h3 { font-size: 1.5rem; }
+    .post-content h4 { font-size: 1.25rem; }
+
+    .post-content p {
+        margin-bottom: 1rem;
+    }
+
+    .post-content ul,
+    .post-content ol {
+        margin-bottom: 1rem;
+        padding-left: 2rem;
+    }
+
+    .post-content li {
+        margin-bottom: 0.5rem;
+    }
+
+    .post-content blockquote {
+        border-left: 4px solid var(--primary-color);
+        margin: 1.5rem 0;
+        padding: 1rem 1.5rem;
+        background: var(--quote-bg);
+        color: var(--text-color);
+        font-style: italic;
+    }
+
+    .post-content code {
+        background: var(--code-bg);
+        color: var(--text-color);
+        padding: 0.2rem 0.4rem;
+        border-radius: 0.25rem;
+        font-family: 'Courier New', monospace;
+        font-size: 0.9em;
+    }
+
+    .post-content pre {
+        background: var(--code-bg);
+        color: var(--text-color);
+        padding: 1rem;
+        border-radius: 0.5rem;
+        overflow-x: auto;
+        margin: 1rem 0;
+        border: 1px solid var(--border-color);
+    }
+
+    .post-content pre code {
+        background: none;
+        padding: 0;
+    }
+
+    .post-content img {
+        max-width: 100%;
+        height: auto;
+        border-radius: 0.5rem;
+        margin: 1rem 0;
+    }
+
+    .post-content table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 1rem 0;
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 0.5rem;
+        overflow: hidden;
+    }
+
+    .post-content th,
+    .post-content td {
+        border: 1px solid var(--border-color);
+        padding: 0.75rem;
+        text-align: left;
+        color: var(--text-color);
+    }
+
+    .post-content th {
+        background: var(--table-header-bg);
+        font-weight: 600;
+    }
+
+    .post-navigation {
+        text-align: center;
+        padding: 1rem 0;
+    }
+
+    /* 모바일 반응형 */
+    @@media (max-width: 768px) {
+        .blog-post-container {
+            padding: 1rem 0.5rem;
+        }
+
+        .post-title {
+            font-size: 2rem;
+        }
+
+        .post-title-container {
+            flex-direction: column;
+            gap: 0.75rem;
+            align-items: flex-start;
+        }
+
+        .post-actions {
+            align-self: flex-end;
+        }
+
+        .post-title-edit {
+            font-size: 1.5rem;
+        }
+
+        .post-meta {
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .post-content {
+            font-size: 1rem;
+        }
+
+        .edit-actions {
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+    }
+</style>
+
+@code {
+    [Parameter] public string UserId { get; set; } = "";
+    [Parameter] public string BlogPostId { get; set; } = "";
+    [Parameter, SupplyParameterFromQuery] public string? ReturnUrl { get; set; }
+
+    private SlogEngine.WebAssembly.Models.BlogPost? post;
+    private bool isLoading = true;
+    private string? referrerUrl = null;
+    
+    // 편집 모드 관련 변수
+    private bool isEditMode = false;
+    private string editTitle = "";
+    private string editSummary = "";
+    private string editContent = "";
+    private string editTags = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        // ReturnUrl 파라미터가 있으면 사용, 없으면 JavaScript referrer 사용 시도
+        if (!string.IsNullOrEmpty(ReturnUrl))
+        {
+            referrerUrl = ReturnUrl;
+        }
+        else
+        {
+            // Referer URL을 저장하여 목록으로 돌아갈 때 사용 (fallback)
+            try
+            {
+                var refererHeader = await JSRuntime.InvokeAsync<string>("eval", "document.referrer");
+                
+                if (!string.IsNullOrEmpty(refererHeader) && refererHeader.Contains($"/blog/{UserId}"))
+                {
+                    referrerUrl = refererHeader;
+                }
+            }
+            catch (Exception)
+            {
+                // JavaScript 에러 무시
+            }
+        }
+        
+        await LoadPost();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadPost();
+    }
+
+    /// <summary>
+    /// 포스트를 로드합니다.
+    /// </summary>
+    private async Task LoadPost()
+    {
+        if (string.IsNullOrEmpty(UserId) || string.IsNullOrEmpty(BlogPostId))
+        {
+            post = null;
+            isLoading = false;
+            return;
+        }
+
+        isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            post = await BlogApiService.GetPostAsync(UserId, BlogPostId);
+            
+            // 포스트 로드 후 페이지 타이틀 업데이트
+            await UpdatePageTitle();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"포스트 로드 실패: {ex.Message}");
+            post = null;
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// 페이지 타이틀을 업데이트합니다.
+    /// </summary>
+    private async Task UpdatePageTitle()
+    {
+        if (post != null && !string.IsNullOrEmpty(post.Title))
+        {
+            // 블로그 메타 정보 가져오기
+            var blogMeta = await BlogApiService.GetBlogMetaAsync(UserId);
+            var blogTitle = blogMeta?.Title ?? $"{UserId} 블로그";
+            
+            var pageTitle = $"{post.Title} - {blogTitle}";
+            await JSRuntime.InvokeVoidAsync("updatePageTitle", pageTitle);
+        }
+        else
+        {
+            await JSRuntime.InvokeVoidAsync("updatePageTitle", "SlogEngine");
+        }
+    }
+
+    /// <summary>
+    /// 포스트 목록으로 돌아갑니다.
+    /// </summary>
+    private void GoBackToList()
+    {
+        // 저장된 referer URL이 있으면 사용, 없으면 기본 URL로 이동
+        if (!string.IsNullOrEmpty(referrerUrl))
+        {
+            Navigation.NavigateTo(referrerUrl);
+        }
+        else if (!string.IsNullOrEmpty(UserId))
+        {
+            Navigation.NavigateTo($"/blog/{UserId}");
+        }
+        else
+        {
+            Navigation.NavigateTo("/blog");
+        }
+    }
+
+    /// <summary>
+    /// 편집 모드를 토글합니다.
+    /// </summary>
+    private async Task ToggleEditMode()
+    {
+        if (post == null) return;
+
+        isEditMode = !isEditMode;
+        
+        if (isEditMode)
+        {
+            // 편집 모드로 전환 시 현재 값들로 초기화
+            editTitle = post.Title ?? "";
+            editSummary = post.Summary ?? "";
+            editContent = post.Content ?? "";
+            editTags = post.Tags ?? "";
+            
+            StateHasChanged();
+            
+            // DOM 업데이트 후 클립보드 리스너 등록
+            await Task.Delay(100);
+            await RegisterClipboardListener();
+        }
+        else
+        {
+            // 편집 모드 종료 시 클립보드 리스너 제거
+            await RemoveClipboardListener();
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// 클립보드 리스너를 등록합니다.
+    /// </summary>
+    private async Task RegisterClipboardListener()
+    {
+        try
+        {
+            await ClipboardService.RegisterPasteListenerAsync("editContent", OnImageUploadCallback);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"클립보드 리스너 등록 실패: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// 클립보드 리스너를 제거합니다.
+    /// </summary>
+    private async Task RemoveClipboardListener()
+    {
+        try
+        {
+            await ClipboardService.RemovePasteListenerAsync("editContent");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"클립보드 리스너 제거 실패: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// 편집을 취소합니다.
+    /// </summary>
+    private async Task CancelEdit()
+    {
+        isEditMode = false;
+        await RemoveClipboardListener();
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// 이미지 업로드 콜백 함수입니다.
+    /// </summary>
+    private Task OnImageUploadCallback(string placeholder, string newImageMarkdown, string imageUrl)
+    {
+        // editContent의 placeholder를 실제 이미지 마크다운으로 교체
+        if (!string.IsNullOrEmpty(editContent))
+        {
+            editContent = editContent.Replace(placeholder, newImageMarkdown);
+            StateHasChanged();
+        }
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// 포스트를 저장합니다.
+    /// </summary>
+    private async Task SavePost()
+    {
+        if (post == null || string.IsNullOrEmpty(UserId)) return;
+
+        try
+        {
+            var updatedPost = new SlogEngine.WebAssembly.Models.BlogPost
+            {
+                Id = post.Id,
+                Title = editTitle,
+                Summary = editSummary,
+                Content = editContent,
+                Tags = editTags,
+                Author = post.Author,
+                Date = post.Date,
+                DatePublished = post.DatePublished,
+                Cover = post.Cover
+            };
+
+            var success = await BlogApiService.UpdatePostAsync(UserId, post.Id, updatedPost);
+            
+            if (success)
+            {
+                // 성공 시 서버에서 최신 포스트 데이터를 다시 로드 (이미지 경로 업데이트를 위해)
+                await LoadPost();
+                isEditMode = false;
+                await RemoveClipboardListener();
+                StateHasChanged();
+                
+                await JSRuntime.InvokeVoidAsync("alert", "포스트가 성공적으로 수정되었습니다.");
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "포스트 수정에 실패했습니다.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"포스트 저장 실패: {ex.Message}");
+            await JSRuntime.InvokeVoidAsync("alert", "포스트 수정 중 오류가 발생했습니다.");
+        }
+    }
+
+    /// <summary>
+    /// 포스트를 삭제합니다.
+    /// </summary>
+    private async Task DeletePost()
+    {
+        if (post == null || string.IsNullOrEmpty(UserId)) return;
+
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "정말 이 포스트를 삭제하시겠습니까?");
+        if (!confirmed) return;
+
+        try
+        {
+            var success = await BlogApiService.DeletePostAsync(UserId, post.Id);
+            
+            if (success)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "포스트가 삭제되었습니다.");
+                GoBackToList();
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "포스트 삭제에 실패했습니다.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"포스트 삭제 실패: {ex.Message}");
+            await JSRuntime.InvokeVoidAsync("alert", "포스트 삭제 중 오류가 발생했습니다.");
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
+        
+        if (post != null)
+        {
+            try
+            {
+                // JavaScript에서 enhanceMarkdownContent 함수가 정의되어 있는지 확인
+                await Task.Delay(100); // DOM 업데이트 대기
+                await JSRuntime.InvokeVoidAsync("enhanceMarkdownContent");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"JavaScript 함수 호출 실패: {ex.Message}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// 컴포넌트 해제 시 클립보드 리스너를 제거합니다.
+    /// </summary>
+    public async ValueTask DisposeAsync()
+    {
+        if (isEditMode)
+        {
+            await RemoveClipboardListener();
+        }
+    }
+}
